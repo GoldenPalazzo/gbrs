@@ -77,6 +77,7 @@ impl CPU {
                 Instruction::NOP => println!("NOPped"),
                 _ => todo!("{:?} not implemented", instr)
             }
+            self.regs.pc += instr.get_size() as u16;
         } else {
             error!(
                 "Invalid opcode {:02X} at {:04X}",

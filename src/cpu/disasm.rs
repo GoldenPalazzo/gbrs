@@ -315,6 +315,13 @@ impl Instruction {
             _ => None
         }
     }
+
+    pub fn get_size(&self) -> u8 {
+        // TODO: correctly get size
+        match self {
+            _ => 1
+        }
+    }
 }
 
 #[cfg(test)]
