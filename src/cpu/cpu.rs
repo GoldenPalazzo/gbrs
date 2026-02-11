@@ -1,5 +1,6 @@
 use paste::paste;
 use crate::cpu::disasm::Instruction;
+use log::{debug, info, warn, error};
 
 #[derive(Default)]
 pub struct Registers {
@@ -71,12 +72,13 @@ impl CPU {
 
     pub fn step(&mut self, buf: &[u8]) {
         if let Some(instr) = Instruction::decode(buf, self.regs.pc as usize) {
+            debug!("{:04X}: {:?}", self.regs.pc, instr);
             match instr {
                 Instruction::NOP => println!("NOPped"),
                 _ => todo!("{:?} not implemented", instr)
             }
         } else {
-            println!(
+            error!(
                 "Invalid opcode {:02X} at {:04X}",
                 buf[self.regs.pc as usize],
                 self.regs.pc

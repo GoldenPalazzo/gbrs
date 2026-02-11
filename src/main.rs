@@ -10,6 +10,8 @@ fn wait_for_enter() {
 }
 
 fn main() {
+    env_logger::init();
+
     let buf = [0u8; 1024];
     let mut cpu = CPU::new();
 
