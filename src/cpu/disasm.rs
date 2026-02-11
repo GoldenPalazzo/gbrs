@@ -83,9 +83,10 @@ enum ArithmeticOperand16 {
     Reg(Reg16),
 }
 
-#[derive(Debug, PartialEq, Eq)]
-enum Instruction {
+#[derive(Default, Debug, PartialEq, Eq)]
+pub enum Instruction {
     // Block 0
+    #[default]
     NOP,
 
     // dovrebbero starci tutti gli LD
@@ -387,6 +388,3 @@ mod tests {
     
 }
 
-fn main() {
-    println!("GB disasm");
-}
