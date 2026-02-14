@@ -1,5 +1,7 @@
 mod cpu;
+mod memory;
 use crate::cpu::cpu::CPU;
+use crate::memory::memory::MemoryBus;
 
 use std::io::{self, Write};
 
@@ -9,14 +11,16 @@ fn wait_for_enter() {
     io::stdin().read_line(&mut input).unwrap();
 }
 
-fn main() {
+fn main() -> std::io::Result<()> {
     env_logger::init();
 
-    let buf = [0u8; 1024];
     let mut cpu = CPU::new();
+    let mut mem = MemoryBus::new();
+    mem.cart.load("./example.gb")?;
+    println!("Loaded cart {:?}", mem.cart.header.title);
 
     loop {
         wait_for_enter();
-        cpu.step(&buf);
+        cpu.step(&mem);
     }
 }

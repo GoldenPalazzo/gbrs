@@ -1,9 +1,15 @@
 use paste::paste;
-use crate::cpu::disasm::Instruction;
+use crate::cpu::disasm::{
+    Instruction,
+    Operand,
+    Reg8, Reg16,
+    Condition
+};
+use crate::MemoryBus;
 use log::{debug, info, warn, error};
 
 #[derive(Default)]
-pub struct Registers {
+struct Registers {
     a: u8,
     b: u8,
     c: u8,
@@ -18,13 +24,13 @@ pub struct Registers {
 }
 
 macro_rules! get_set {
-    ($reg:ident) => {
+    ($reg:ident, $size:ident) => {
         paste! {
-            pub fn [<get_ $reg>](&self) -> u8 {
+            pub fn [<get_ $reg>](&self) -> $size {
                 self.$reg
             }
 
-            pub fn [<set_ $reg>](&mut self, val: u8) {
+            pub fn [<set_ $reg>](&mut self, val: $size) {
                 self.$reg = val;
             }
         }
@@ -48,16 +54,18 @@ macro_rules! get_set_dual {
 
 
 impl Registers {
-    get_set!(a);
-    get_set!(b);
-    get_set!(c);
-    get_set!(d);
-    get_set!(e);
-    get_set!(h);
-    get_set!(l);
+    get_set!(a, u8);
+    get_set!(b, u8);
+    get_set!(c, u8);
+    get_set!(d, u8);
+    get_set!(e, u8);
+    get_set!(h, u8);
+    get_set!(l, u8);
+    get_set_dual!(a, f);
     get_set_dual!(b, c);
     get_set_dual!(d, e);
     get_set_dual!(h, l);
+    get_set!(pc, u16);
 }
 
 #[derive(Default)]
@@ -67,23 +75,68 @@ pub struct CPU {
 
 impl CPU {
     pub fn new() -> Self {
-        Self::default()
+        let mut new = Self::default();
+        new.regs.set_pc(0x100);
+        new
     }
 
-    pub fn step(&mut self, buf: &[u8]) {
-        if let Some(instr) = Instruction::decode(buf, self.regs.pc as usize) {
+    pub fn step(&mut self, mem_bus: &MemoryBus) {
+        if let Some(instr) = Instruction::decode(mem_bus.read(self.regs.pc)) {
             debug!("{:04X}: {:?}", self.regs.pc, instr);
-            match instr {
-                Instruction::NOP => println!("NOPped"),
-                _ => todo!("{:?} not implemented", instr)
-            }
-            self.regs.pc += instr.get_size() as u16;
+            self.execute_instruction(mem_bus, &instr);
         } else {
             error!(
                 "Invalid opcode {:02X} at {:04X}",
-                buf[self.regs.pc as usize],
+                mem_bus.read(self.regs.pc),
                 self.regs.pc
             );
+        }
+    }
+
+    fn execute_instruction(&mut self, mem_bus: &MemoryBus, instr: &Instruction) {
+        let mut new_pc = self.regs.get_pc() + instr.get_size() as u16;
+        match instr {
+            Instruction::NOP => (),
+            Instruction::JP(cond, op) => 'jp: {
+                if !self.check_cond(cond) {break 'jp};
+                match op {
+                    Operand::Imm16 => {
+                        new_pc = u16::from_le_bytes([
+                            mem_bus.read(self.regs.pc+1),
+                            mem_bus.read(self.regs.pc+2)
+                        ]);
+                    },
+                    Operand::Reg16(reg) => {
+                        match reg {
+                            Reg16::HL => new_pc = self.regs.get_hl(),
+                            _ => unreachable!("Non-existing instruction {:?}", instr)
+                        }
+                    }
+                    _ => unreachable!("Non-existing instruction {:?}", instr)
+                }
+            }
+            _ => todo!("{:?} not implemented", instr)
+        }
+        self.regs.set_pc(new_pc);
+        debug!("New PC: {:04X}", self.regs.get_pc());
+    }
+
+    fn check_cond(&self, cond: &Option<Condition>) -> bool {
+        match cond {
+            None => true,
+            Some(Condition::NonZero) => {
+                ((self.regs.get_af() & 0x80) >> 7) == 0
+            },
+            Some(Condition::Zero) => {
+                ((self.regs.get_af() & 0x80) >> 7) == 1
+            },
+            Some(Condition::NonCarry) => {
+                ((self.regs.get_af() & 0x10) >> 4) == 0
+            },
+            Some(Condition::Carry) => {
+                ((self.regs.get_af() & 0x10) >> 4) == 1
+            },
+            Some(_) => todo!("{:?} not implemented", cond)
         }
     }
 }

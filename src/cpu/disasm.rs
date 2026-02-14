@@ -1,5 +1,5 @@
 #[derive(Debug, PartialEq, Eq)]
-enum Reg8 {
+pub enum Reg8 {
     A, B, C, D, E, H, L, HLderef
 }
 
@@ -20,12 +20,12 @@ impl Reg8 {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum Reg16 {
+pub enum Reg16 {
     BC, DE, HL, SP, AF, HLplus, HLminus
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum Reg16Kind {
+pub enum Reg16Kind {
     Normal,
     Stk,
     Mem,
@@ -52,7 +52,7 @@ impl Reg16 {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum Condition {
+pub enum Condition {
     NonZero,
     Zero,
     NonCarry,
@@ -72,15 +72,13 @@ impl Condition {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum ArithmeticOperand8 {
-    Imm(u8),
-    Reg(Reg8),
-}
-
-#[derive(Debug, PartialEq, Eq)]
-enum ArithmeticOperand16 {
-    Imm(u16),
-    Reg(Reg16),
+pub enum Operand {
+    Imm8,
+    Reg8(Reg8),
+    Imm16,
+    Reg16(Reg16),
+    AddrIndirect(Reg16),
+    AddrDirect16
 }
 
 #[derive(Default, Debug, PartialEq, Eq)]
@@ -91,14 +89,12 @@ pub enum Instruction {
 
     // dovrebbero starci tutti gli LD
 
-    INC16(Reg16),
-    INC8(Reg8),
-    DEC16(Reg16),
-    DEC8(Reg8),
+    INC(Operand),
+    DEC(Operand),
 
     ADDHL(Reg16),
 
-    LD8(Reg8, u8),
+    LD(Operand, Operand),
 
     RLCA,
     RRCA,
@@ -109,35 +105,34 @@ pub enum Instruction {
     SCF,
     CCF,
 
-    JR(Option<Condition>, u8),
+    JR(Option<Condition>, Operand),
 
     STOP,
 
     // Block 1 (reg-to-reg 8 bit loads)
     HALT,
-    LD8RR(Reg8, Reg8),
 
     // Block 2 (8 bit arithmetic) / Block 3
-    ADD(ArithmeticOperand8),
-    ADC(ArithmeticOperand8),
-    SUB(ArithmeticOperand8),
-    SBC(ArithmeticOperand8),
-    AND(ArithmeticOperand8),
-    XOR(ArithmeticOperand8),
-    OR(ArithmeticOperand8),
-    CP(ArithmeticOperand8),
+    ADD(Operand),
+    ADC(Operand),
+    SUB(Operand),
+    SBC(Operand),
+    AND(Operand),
+    XOR(Operand),
+    OR(Operand),
+    CP(Operand),
 
     // Block 3
     RET(Option<Condition>),
     RETI,
-    JP(Option<Condition>, ArithmeticOperand16),
-    CALL(Option<Condition>, u16),
+    JP(Option<Condition>, Operand),
+    CALL(Option<Condition>, Operand),
     RST,
 
     POP(Reg16),
     PUSH(Reg16),
 
-    ADDSP(u8),
+    ADDSP(Operand),
 
     DI,
     EI,
@@ -147,24 +142,27 @@ pub enum Instruction {
 
 impl Instruction {
     #[allow(dead_code)]
-    pub fn decode(buf: &[u8], addr: usize) -> Option<Self> {
-        let opcode = buf[addr];
+    pub fn decode(opcode: u8) -> Option<Self> {
         match opcode {
             0x00 => Some(Self::NOP),
             0x03 | 0x13 | 0x23 | 0x33 =>
-                Some(Self::INC16(
+                Some(Self::INC(Operand::Reg16(
                     Reg16::extract(opcode, Reg16Kind::Normal)
-                )),
+                ))),
             0x04 | 0x0c | 0x14 | 0x1c |
             0x24 | 0x2c | 0x34 | 0x3c =>
-                Some(Self::INC8(Reg8::extract(opcode, 3))),
+                Some(Self::INC(Operand::Reg8(
+                    Reg8::extract(opcode, 3)
+                ))),
             0x05 | 0x0d | 0x15 | 0x1d |
             0x25 | 0x2d | 0x35 | 0x3d =>
-                Some(Self::DEC8(Reg8::extract(opcode, 3))),
+                Some(Self::DEC(Operand::Reg8(
+                    Reg8::extract(opcode, 3)
+                ))),
             0x0b | 0x1b | 0x2b | 0x3b =>
-                Some(Self::DEC16(
+                Some(Self::DEC(Operand::Reg16(
                     Reg16::extract(opcode, Reg16Kind::Normal)
-                )),
+                ))),
             0x09 | 0x19 | 0x29 | 0x39 =>
                 Some(Self::ADDHL(
                     Reg16::extract(opcode, Reg16Kind::Normal)
@@ -172,10 +170,31 @@ impl Instruction {
 
             0x06 | 0x0e | 0x16 | 0x1e |
             0x26 | 0x2e | 0x36 | 0x3e =>
-                Some(Self::LD8(
-                    Reg8::extract(opcode, 3),
-                    buf[addr+1]
+                Some(Self::LD(
+                    Operand::Reg8(Reg8::extract(opcode, 3)),
+                    Operand::Imm8
                 )),
+
+            0x08 => Some(Self::LD(
+                    Operand::AddrDirect16,
+                    Operand::Reg16(Reg16::SP)
+            )),
+
+            0x0a | 0x1a | 0x2a | 0x3a => Some(Self::LD(
+                    Operand::Reg8(Reg8::A),
+                    Operand::AddrIndirect(Reg16::extract(opcode, Reg16Kind::Mem))
+            )),
+
+            0x02 | 0x12 | 0x22 | 0x32 => Some(Self::LD(
+                    Operand::AddrIndirect(Reg16::extract(opcode, Reg16Kind::Mem)),
+                    Operand::Reg8(Reg8::A)
+            )),
+
+            0x01 | 0x11 | 0x21 | 0x31 => Some(Self::LD(
+                    Operand::Reg16(Reg16::extract(opcode, Reg16Kind::Normal)),
+                    Operand::Imm16
+            )),
+
 
             0x07 => Some(Self::RLCA),
             0x0f => Some(Self::RRCA),
@@ -186,11 +205,11 @@ impl Instruction {
             0x37 => Some(Self::SCF),
             0x3f => Some(Self::CCF),
 
-            0x18 => Some(Self::JR(None, buf[addr+1])),
+            0x18 => Some(Self::JR(None, Operand::Imm8)),
             0x20 | 0x28 | 0x30 | 0x38 =>
                 Some(Self::JR(
                     Some(Condition::extract(opcode)),
-                    buf[addr+1]
+                    Operand::Imm8
                 )),
 
             0x10 => Some(Self::STOP),
@@ -199,62 +218,62 @@ impl Instruction {
             
             0x76 => Some(Self::HALT),
             0x40..=0x7F => {
-                let dst = Reg8::extract(opcode, 3);
-                let src = Reg8::extract(opcode, 0);
-                Some(Self::LD8RR(dst, src))
+                let dst = Operand::Reg8(Reg8::extract(opcode, 3));
+                let src = Operand::Reg8(Reg8::extract(opcode, 0));
+                Some(Self::LD(dst, src))
             },
 
             // Block 2
             0x80..=0x87 => Some(Self::ADD(
-                ArithmeticOperand8::Reg(
+                Operand::Reg8(
                     Reg8::extract(opcode, 0)
                 )
             )),
             0x88..=0x8f => Some(Self::ADC(
-                ArithmeticOperand8::Reg(
+                Operand::Reg8(
                     Reg8::extract(opcode, 0)
                 )
             )),
             0x90..=0x97 => Some(Self::SUB(
-                ArithmeticOperand8::Reg(
+                Operand::Reg8(
                     Reg8::extract(opcode, 0)
                 )
             )),
             0x98..=0x9f => Some(Self::SBC(
-                ArithmeticOperand8::Reg(
+                Operand::Reg8(
                     Reg8::extract(opcode, 0)
                 )
             )),
             0xa0..=0xa7 => Some(Self::AND(
-                ArithmeticOperand8::Reg(
+                Operand::Reg8(
                     Reg8::extract(opcode, 0)
                 )
             )),
             0xa8..=0xaf => Some(Self::XOR(
-                ArithmeticOperand8::Reg(
+                Operand::Reg8(
                     Reg8::extract(opcode, 0)
                 )
             )),
             0xb0..=0xb7 => Some(Self::OR(
-                ArithmeticOperand8::Reg(
+                Operand::Reg8(
                     Reg8::extract(opcode, 0)
                 )
             )),
             0xb8..=0xbf => Some(Self::CP(
-                ArithmeticOperand8::Reg(
+                Operand::Reg8(
                     Reg8::extract(opcode, 0)
                 )
             )),
 
             // Block 3
-            0xc6 => Some(Self::ADD(ArithmeticOperand8::Imm(buf[addr+1]))),
-            0xce => Some(Self::ADC(ArithmeticOperand8::Imm(buf[addr+1]))),
-            0xd6 => Some(Self::SUB(ArithmeticOperand8::Imm(buf[addr+1]))),
-            0xde => Some(Self::SBC(ArithmeticOperand8::Imm(buf[addr+1]))),
-            0xe6 => Some(Self::AND(ArithmeticOperand8::Imm(buf[addr+1]))),
-            0xee => Some(Self::XOR(ArithmeticOperand8::Imm(buf[addr+1]))),
-            0xf6 => Some(Self::OR(ArithmeticOperand8::Imm(buf[addr+1]))),
-            0xfe => Some(Self::CP(ArithmeticOperand8::Imm(buf[addr+1]))),
+            0xc6 => Some(Self::ADD(Operand::Imm8)),
+            0xce => Some(Self::ADC(Operand::Imm8)),
+            0xd6 => Some(Self::SUB(Operand::Imm8)),
+            0xde => Some(Self::SBC(Operand::Imm8)),
+            0xe6 => Some(Self::AND(Operand::Imm8)),
+            0xee => Some(Self::XOR(Operand::Imm8)),
+            0xf6 => Some(Self::OR(Operand::Imm8)),
+            0xfe => Some(Self::CP(Operand::Imm8)),
 
             0xc0 | 0xc8 | 0xd0 | 0xd8 => 
                 Some(Self::RET(Some(Condition::extract(opcode)))),
@@ -264,34 +283,28 @@ impl Instruction {
             0xc2 | 0xca | 0xd2 | 0xda =>
                 Some(Self::JP(
                     Some(Condition::extract(opcode)),
-                    ArithmeticOperand16::Imm(
-                        u16::from_le_bytes([buf[addr+1],buf[addr+2]])
-                    )
+                    Operand::Imm16
                 )),
 
             0xc3 => Some(Self::JP(
                         None,
-                        ArithmeticOperand16::Imm(
-                            u16::from_le_bytes([buf[addr+1],buf[addr+2]])
-                        )
+                        Operand::Imm16
                     )),
 
             0xe9 => Some(Self::JP(
                         None,
-                        ArithmeticOperand16::Reg(
-                            Reg16::HL
-                        )
+                        Operand::Reg16(Reg16::HL)
                     )),
 
             0xc4 | 0xcc | 0xd4 | 0xdc =>
                 Some(Self::CALL(
                     Some(Condition::extract(opcode)),
-                    u16::from_le_bytes([buf[addr+1],buf[addr+2]])
+                    Operand::Imm16
                 )),
 
             0xcd => Some(Self::CALL(
                 None,
-                u16::from_le_bytes([buf[addr+1],buf[addr+2]])
+                Operand::Imm16
             )),
 
             0xc7..=0xff if (opcode & 0xc7) == 0xc7 =>
@@ -305,7 +318,7 @@ impl Instruction {
 
             0xcb => todo!("Prefix not implemented"),
 
-            0xe8 => Some(Self::ADDSP(buf[addr+1])),
+            0xe8 => Some(Self::ADDSP(Operand::Imm8)),
 
 
             // Hardlock instructions
@@ -347,7 +360,7 @@ mod tests {
                 vec![0x38, 0x05],
                 Some(Instruction::JR(
                     Some(Condition::Carry),
-                    5
+                    Operand::Imm8
                 ))
             ),
             (
@@ -370,20 +383,20 @@ mod tests {
             (
                 vec![0xa9],
                 Some(Instruction::XOR(
-                    ArithmeticOperand8::Reg(Reg8::C),
+                    Operand::Reg8(Reg8::C),
                 ))
             ),
             (
                 vec![0xc6, 0x08],
                 Some(Instruction::ADD(
-                    ArithmeticOperand8::Imm(8),
+                    Operand::Imm8,
                 ))
             ),
 
         ];
 
         for (rom, expected) in cases {
-            let instr = Instruction::decode(&rom, 0);
+            let instr = Instruction::decode(rom[0]);
             assert!(
                 instr == expected,
                 "Failed disasm: expected {:?}, got {:?}",
