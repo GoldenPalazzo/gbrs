@@ -15,12 +15,11 @@ fn main() -> std::io::Result<()> {
     env_logger::init();
 
     let mut cpu = CPU::new();
-    let mut mem = MemoryBus::new();
-    mem.cart.load("./example.gb")?;
-    println!("Loaded cart {:?}", mem.cart.header.title);
+    let mut mem = MemoryBus::from_file("./example.gb");
+    println!("Loaded cart {:?}", mem.cart.title);
 
     loop {
         wait_for_enter();
-        cpu.step(&mem);
+        cpu.step(&mut mem);
     }
 }

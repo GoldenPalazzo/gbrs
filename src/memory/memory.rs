@@ -1,50 +1,4 @@
-#[derive(Default)]
-pub struct Header {
-    pub title: String,
-    // pub manufacturer: String,
-    // pub cgb_only: bool
-}
-
-pub struct Cartridge {
-    pub header: Header,
-    pub data: [u8; 0x4000]
-}
-
-impl Default for Cartridge {
-    fn default() -> Self {
-        Self {
-            data: [0u8; 0x4000],
-            header: Header::default()
-        }
-    }
-}
-
-impl Cartridge {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn load(&mut self, path: &str) -> std::io::Result<()> {
-        use std::fs::File;
-        use std::io::Read;
-        let mut file = File::open(path)?;
-        file.read_exact(&mut self.data)?;
-        self.load_header();
-        Ok(())
-    }
-
-    pub fn from_file(path: &str) -> std::io::Result<Self> {
-        let mut new = Self::new();
-        new.load(path)?;
-        Ok(new)
-    }
-
-    fn load_header(&mut self) {
-        self.header.title = 
-            String::from_utf8_lossy(&self.data[0x134..0x144])
-            .to_string();
-    }
-}
+use crate::memory::cartridge::Cartridge;
 
 #[derive(Default)]
 pub struct MemoryBus {
@@ -56,10 +10,33 @@ impl MemoryBus {
         Self::default()
     }
 
+    pub fn from_file(path: &str) -> Self {
+        Self {
+            cart: Cartridge::from_file(path).unwrap()
+        }
+    }
+
+
     pub fn read(&self, addr: u16) -> u8 {
         match addr {
-            0x0000..=0x3fff => self.cart.data[addr as usize],
+            0x0000..=0x7fff => self.cart.mapper.read(addr),
             _ => 0xff
         }
+    }
+
+    pub fn write8(&mut self, addr: u16, data: u8) {
+        match addr {
+            0x0000..=0x7fff => self.cart.mapper.write(addr, data),
+            _ => todo!(
+                "Write to address 0x{:04X} hasn't been implemented yet",
+                addr
+            )
+        } 
+    }
+
+    pub fn write16(&mut self, addr: u16, data: u16) {
+        let bytes = data.to_le_bytes();
+        self.write8(addr, bytes[0]);
+        self.write8(addr.wrapping_add(1), bytes[1]);
     }
 }

@@ -332,6 +332,13 @@ impl Instruction {
     pub fn get_size(&self) -> u8 {
         // TODO: correctly get size
         match self {
+            Self::LD(_, Operand::Imm16)
+            | Self::LD(Operand::AddrDirect16, _) => 3,
+
+            Self::LD(_, Operand::Imm8) => 2,
+
+            Self::JR(_, Operand::Imm8) => 2,
+
             _ => 1
         }
     }
