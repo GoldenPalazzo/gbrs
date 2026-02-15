@@ -17,9 +17,14 @@ fn main() -> std::io::Result<()> {
     let mut cpu = CPU::new();
     let mut mem = MemoryBus::from_file("./example.gb");
     println!("Loaded cart {:?}", mem.cart.title);
+    let mut bp = false;
+    let bps = vec![0x20f];
 
     loop {
-        wait_for_enter();
+        if bps.contains(&cpu.regs.get_pc()) { bp = true; }
+        if bp {
+            wait_for_enter();
+        }
         cpu.step(&mut mem);
     }
 }

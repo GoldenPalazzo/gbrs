@@ -92,8 +92,6 @@ pub enum Instruction {
     INC(Operand),
     DEC(Operand),
 
-    ADDHL(Reg16),
-
     LD(Operand, Operand),
 
     RLCA,
@@ -113,14 +111,14 @@ pub enum Instruction {
     HALT,
 
     // Block 2 (8 bit arithmetic) / Block 3
-    ADD(Operand),
-    ADC(Operand),
-    SUB(Operand),
-    SBC(Operand),
-    AND(Operand),
-    XOR(Operand),
-    OR(Operand),
-    CP(Operand),
+    ADD(Operand, Operand),
+    ADC(Operand, Operand),
+    SUB(Operand, Operand),
+    SBC(Operand, Operand),
+    AND(Operand, Operand),
+    XOR(Operand, Operand),
+    OR(Operand, Operand),
+    CP(Operand, Operand),
 
     // Block 3
     RET(Option<Condition>),
@@ -131,8 +129,6 @@ pub enum Instruction {
 
     POP(Reg16),
     PUSH(Reg16),
-
-    ADDSP(Operand),
 
     DI,
     EI,
@@ -164,8 +160,9 @@ impl Instruction {
                     Reg16::extract(opcode, Reg16Kind::Normal)
                 ))),
             0x09 | 0x19 | 0x29 | 0x39 =>
-                Some(Self::ADDHL(
-                    Reg16::extract(opcode, Reg16Kind::Normal)
+                Some(Self::ADD(
+                    Operand::Reg16(Reg16::HL),
+                    Operand::Reg16(Reg16::extract(opcode, Reg16Kind::Normal))
                 )),
 
             0x06 | 0x0e | 0x16 | 0x1e |
@@ -225,55 +222,63 @@ impl Instruction {
 
             // Block 2
             0x80..=0x87 => Some(Self::ADD(
+                Operand::Reg8(Reg8::A),
                 Operand::Reg8(
                     Reg8::extract(opcode, 0)
                 )
             )),
             0x88..=0x8f => Some(Self::ADC(
+                Operand::Reg8(Reg8::A),
                 Operand::Reg8(
                     Reg8::extract(opcode, 0)
                 )
             )),
             0x90..=0x97 => Some(Self::SUB(
+                Operand::Reg8(Reg8::A),
                 Operand::Reg8(
                     Reg8::extract(opcode, 0)
                 )
             )),
             0x98..=0x9f => Some(Self::SBC(
+                Operand::Reg8(Reg8::A),
                 Operand::Reg8(
                     Reg8::extract(opcode, 0)
                 )
             )),
             0xa0..=0xa7 => Some(Self::AND(
+                Operand::Reg8(Reg8::A),
                 Operand::Reg8(
                     Reg8::extract(opcode, 0)
                 )
             )),
             0xa8..=0xaf => Some(Self::XOR(
+                Operand::Reg8(Reg8::A),
                 Operand::Reg8(
                     Reg8::extract(opcode, 0)
                 )
             )),
             0xb0..=0xb7 => Some(Self::OR(
+                Operand::Reg8(Reg8::A),
                 Operand::Reg8(
                     Reg8::extract(opcode, 0)
                 )
             )),
             0xb8..=0xbf => Some(Self::CP(
+                Operand::Reg8(Reg8::A),
                 Operand::Reg8(
                     Reg8::extract(opcode, 0)
                 )
             )),
 
             // Block 3
-            0xc6 => Some(Self::ADD(Operand::Imm8)),
-            0xce => Some(Self::ADC(Operand::Imm8)),
-            0xd6 => Some(Self::SUB(Operand::Imm8)),
-            0xde => Some(Self::SBC(Operand::Imm8)),
-            0xe6 => Some(Self::AND(Operand::Imm8)),
-            0xee => Some(Self::XOR(Operand::Imm8)),
-            0xf6 => Some(Self::OR(Operand::Imm8)),
-            0xfe => Some(Self::CP(Operand::Imm8)),
+            0xc6 => Some(Self::ADD(Operand::Reg8(Reg8::A), Operand::Imm8)),
+            0xce => Some(Self::ADC(Operand::Reg8(Reg8::A), Operand::Imm8)),
+            0xd6 => Some(Self::SUB(Operand::Reg8(Reg8::A), Operand::Imm8)),
+            0xde => Some(Self::SBC(Operand::Reg8(Reg8::A), Operand::Imm8)),
+            0xe6 => Some(Self::AND(Operand::Reg8(Reg8::A), Operand::Imm8)),
+            0xee => Some(Self::XOR(Operand::Reg8(Reg8::A), Operand::Imm8)),
+            0xf6 => Some(Self::OR(Operand::Reg8(Reg8::A), Operand::Imm8)),
+            0xfe => Some(Self::CP(Operand::Reg8(Reg8::A), Operand::Imm8)),
 
             0xc0 | 0xc8 | 0xd0 | 0xd8 => 
                 Some(Self::RET(Some(Condition::extract(opcode)))),
@@ -318,7 +323,7 @@ impl Instruction {
 
             0xcb => todo!("Prefix not implemented"),
 
-            0xe8 => Some(Self::ADDSP(Operand::Imm8)),
+            0xe8 => Some(Self::ADD(Operand::Reg16(Reg16::SP), Operand::Imm8)),
 
 
             // Hardlock instructions
@@ -326,20 +331,6 @@ impl Instruction {
             0xed | 0xf4 | 0xfc | 0xfd => Some(Self::Hardlock),
             
             _ => None
-        }
-    }
-
-    pub fn get_size(&self) -> u8 {
-        // TODO: correctly get size
-        match self {
-            Self::LD(_, Operand::Imm16)
-            | Self::LD(Operand::AddrDirect16, _) => 3,
-
-            Self::LD(_, Operand::Imm8) => 2,
-
-            Self::JR(_, Operand::Imm8) => 2,
-
-            _ => 1
         }
     }
 }
