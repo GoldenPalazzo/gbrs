@@ -6,6 +6,7 @@ use crate::cpu::disasm::{
     Condition
 };
 use crate::cpu::registers::*;
+use crate::cpu::implements::*;
 use crate::MemoryBus;
 #[allow(unused_imports)]
 use log::{debug, info, warn, error};
@@ -26,7 +27,6 @@ impl CPU {
 
     pub fn print_state(&self) {
         let r = &self.regs;
-        // Recuperiamo i flag singolarmente per una lettura rapida
         let f = r.get_af() as u8;
         let z = if f & 0x80 != 0 { 'Z' } else { '-' };
         let n = if f & 0x40 != 0 { 'N' } else { '-' };
@@ -76,98 +76,22 @@ impl CPU {
         self.set_operand_value(bus, dst, val);
     }
 
-    fn add(&mut self, bus: &mut MemoryBus, dst: &Operand, src: &Operand, carry: bool) {
-        let src_val = self.get_operand_value(bus, src);
-        let dst_val = self.get_operand_value(bus, dst);
-        let carry = if carry { 1u8 } else { 0u8 };
-        let res = dst_val.wrapping_add(src_val).wrapping_add(carry as u16);
-        self.set_operand_value(bus, dst, res);
-        self.regs.set_flag(FLAG_N, false);
-        match (dst, src) {
-            (Operand::Reg16(Reg16::SP), Operand::Imm8)
-            | (Operand::Reg16(Reg16::HL), Operand::Reg16(_)) => {
-                self.regs.set_flag(FLAG_Z, res == 0);
-                self.regs.set_flag(FLAG_C, res < dst_val);
-                self.regs.set_flag(
-                    FLAG_H,
-                    (src_val & 0xfff) + (dst_val & 0xfff) + carry as u16 > 0xfff
-                )
-            }
-            (Operand::Reg8(Reg8::A), _) => {
-                self.regs.set_flag(FLAG_Z, (res as u8) == 0);
-                self.regs.set_flag(FLAG_C, (res as u8) < (dst_val as u8));
-                self.regs.set_flag(
-                    FLAG_H,
-                    (src_val as u8 & 0xf) + (dst_val as u8 & 0xf) + carry > 0xf
-                )
-            }
-            _ => unreachable!()
+    fn apply_alu(&mut self, bus: &mut MemoryBus, dst: Option<&Operand>, res: &AluResult) {
+        if let Some(z) = res.z {
+            self.regs.set_flag(FLAG_Z, z);
         }
-    }
-
-    fn inc(&mut self, bus: &mut MemoryBus, dst: &Operand) {
-        let dst_val = self.get_operand_value(bus, dst);
-        let res = dst_val.wrapping_add(1);
-        self.set_operand_value(bus, dst, res);
-        self.regs.set_flag(FLAG_N, false);
-        match dst {
-            Operand::Reg16(_) => {
-            }
-            Operand::Reg8(_) => {
-                self.regs.set_flag(FLAG_Z, (res as u8) == 0);
-                self.regs.set_flag(
-                    FLAG_H,
-                    (dst_val as u8 & 0xf) + 1 > 0xf
-                );
-            }
-            _ => unreachable!()
+        if let Some(n) = res.n {
+            self.regs.set_flag(FLAG_N, n);
         }
-    }
-
-    fn dec(&mut self, bus: &mut MemoryBus, dst: &Operand) {
-        let dst_val = self.get_operand_value(bus, dst);
-        let res = dst_val.wrapping_sub(1);
-        self.set_operand_value(bus, dst, res);
-        self.regs.set_flag(FLAG_N, true);
-        match dst {
-            Operand::Reg16(_) => {
-            }
-            Operand::Reg8(_) => {
-                self.regs.set_flag(FLAG_Z, (res as u8) == 0);
-                self.regs.set_flag(
-                    FLAG_H,
-                    (dst_val as u8 & 0xf) == 0
-                );
-            }
-            _ => unreachable!()
+        if let Some(h) = res.h {
+            self.regs.set_flag(FLAG_H, h);
         }
-    }
-
-    fn rotate_acc(&mut self, carry: bool, right: bool) {
-        assert_eq!(right, true);
-        let mut val = self.regs.get_a();
-        let old_carry = if self.regs.get_flag(FLAG_C) {0xff} else {0xfe};
-        self.regs.set_flag(FLAG_C, (val & 0x80) > 0);
-        val = val.rotate_left(1);
-        if !carry { val &= old_carry; }
-        self.regs.set_a(val);
-        self.regs.set_flag(FLAG_Z, false);
-        self.regs.set_flag(FLAG_H, false);
-        self.regs.set_flag(FLAG_N, false);
-    }
-
-    fn complement_acc(&mut self) { 
-        let val = self.regs.get_a();
-        self.regs.set_a(!val);
-        self.regs.set_flag(FLAG_H, true);
-        self.regs.set_flag(FLAG_N, true);
-    }
-
-    fn mod_carry(&mut self, compl: bool) {
-        let f = !compl || !self.regs.get_flag(FLAG_C);
-        self.regs.set_flag(FLAG_H, false);
-        self.regs.set_flag(FLAG_N, false);
-        self.regs.set_flag(FLAG_C, f);
+        if let Some(c) = res.c {
+            self.regs.set_flag(FLAG_C, c);
+        }
+        if let Some(op) = dst {
+            self.set_operand_value(bus, op, res.val);
+        }
     }
 
     fn execute_instruction(&mut self, bus: &mut MemoryBus, instr: &Instruction) {
@@ -175,22 +99,136 @@ impl CPU {
             Instruction::NOP => (),
             Instruction::JP(cond, op) => self.jump(bus, cond, op, false),
             Instruction::LD(dst, src) => self.load(bus, dst, src),
-            Instruction::INC(reg) => self.inc(bus, reg),
-            Instruction::DEC(reg) => self.dec(bus, reg),
-            Instruction::ADD(dst, src) => self.add(bus, dst, src, false),
-            Instruction::ADC(dst, src) => self.add(bus, dst, src, true),
-            // Instruction::SUB(dst, src) => self.add(bus, dst, src, true),
+            Instruction::INC(reg) => {
+                let dst_val = self.get_operand_value(bus, reg);
+                match reg {
+                    Operand::Reg8(_) =>
+                        self.apply_alu(bus, Some(reg), &inc_u8(dst_val as u8)),
+                    Operand::Reg16(_) =>
+                        self.apply_alu(bus, Some(reg), &inc_u16(dst_val)),
+                    _ => unreachable!()
+                }
+            },
+            Instruction::DEC(reg) => {
+                let dst_val = self.get_operand_value(bus, reg);
+                match reg {
+                    Operand::Reg8(_) =>
+                        self.apply_alu(bus, Some(reg), &dec_u8(dst_val as u8)),
+                    Operand::Reg16(_) =>
+                        self.apply_alu(bus, Some(reg), &dec_u16(dst_val)),
+                    _ => unreachable!()
+                }
+            },
+            Instruction::ADD(dst, src) => {
+                let dst_val = self.get_operand_value(bus, dst);
+                let src_val = self.get_operand_value(bus, dst);
+                match (dst, src) {
+                    (Operand::Reg16(Reg16::HL), Operand::Reg16(_)) => {
+                        self.apply_alu(
+                            bus,
+                            Some(dst),
+                            &add_hl(dst_val, src_val)
+                        );
+                    }
+                    (Operand::Reg16(Reg16::SP), Operand::Imm8) => {
+                        self.apply_alu(
+                            bus,
+                            Some(dst),
+                            &add_sp(dst_val, src_val as u8 as i8)
+                        );
+                    }
+                    (Operand::Reg8(Reg8::A), _) => {
+                        self.apply_alu(
+                            bus,
+                            Some(dst),
+                            &add_acc(dst_val as u8, src_val as u8, false)
+                        );
+                    }
+                    _ => unreachable!()
+                }
+            }
+            Instruction::ADC(dst, src) => match (dst, src) {
+                (Operand::Reg8(Reg8::A), _) => {
+                    let dst_val = self.get_operand_value(bus, dst);
+                    let src_val = self.get_operand_value(bus, dst);
+                    self.apply_alu(
+                        bus,
+                        Some(dst),
+                        &add_acc(dst_val as u8, src_val as u8, true)
+                    );
+                }
+                _ => unreachable!()
+            }
+            Instruction::SUB(dst, src) => match (dst, src) {
+                (Operand::Reg8(Reg8::A), _) => {
+                    let dst_val = self.get_operand_value(bus, dst);
+                    let src_val = self.get_operand_value(bus, dst);
+                    self.apply_alu(
+                        bus,
+                        Some(dst),
+                        &sub(dst_val as u8, src_val as u8, false)
+                    );
+                }
+                _ => unreachable!()
+            },
+            Instruction::SBC(dst, src) => match (dst, src) {
+                (Operand::Reg8(Reg8::A), _) => {
+                    let dst_val = self.get_operand_value(bus, dst);
+                    let src_val = self.get_operand_value(bus, dst);
+                    self.apply_alu(
+                        bus,
+                        Some(dst),
+                        &sub(dst_val as u8, src_val as u8, true)
+                    );
+                }
+                _ => unreachable!()
+            },
             Instruction::JR(cond, op) => self.jump(bus, cond, op, true),
 
 
-            Instruction::RLCA => self.rotate_acc(true, false),
-            Instruction::RRCA => self.rotate_acc(true, true),
-            Instruction::RLA => self.rotate_acc(false, false),
-            Instruction::RRA => self.rotate_acc(false, true),
+            Instruction::RLCA => self.apply_alu(
+                bus,
+                Some(&Operand::Reg8(Reg8::A)),
+                &lrotate(self.regs.get_a(), false, None)
+            ),
+            Instruction::RRCA => self.apply_alu(
+                bus,
+                Some(&Operand::Reg8(Reg8::A)),
+                &rrotate(self.regs.get_a(), false, None)
+            ),
+            Instruction::RLA => self.apply_alu(
+                bus,
+                Some(&Operand::Reg8(Reg8::A)),
+                &lrotate(self.regs.get_a(), false, Some(self.regs.get_flag(FLAG_C)))
+            ),
+            Instruction::RRA => self.apply_alu(
+                bus,
+                Some(&Operand::Reg8(Reg8::A)),
+                &rrotate(self.regs.get_a(), false, Some(self.regs.get_flag(FLAG_C)))
+            ),
             Instruction::DAA => todo!("Implementing BCD instrs later"),
-            Instruction::CPL => self.complement_acc(),
-            Instruction::SCF => self.mod_carry(false),
-            Instruction::CCF => self.mod_carry(true),
+            Instruction::CPL => self.apply_alu(
+                bus,
+                Some(&Operand::Reg8(Reg8::A)),
+                &complement(self.regs.get_a())
+            ),
+            Instruction::SCF => self.apply_alu(
+                bus,
+                None,
+                &AluResult {
+                    val: 0, z: None,
+                    n: Some(false), h: Some(false), c: Some(true)
+                }
+            ),
+            Instruction::CCF => self.apply_alu(
+                bus,
+                None,
+                &AluResult {
+                    val: 0, z: None,
+                    n: Some(false), h: Some(false),
+                    c: Some(!self.regs.get_flag(FLAG_C))
+                }
+            ),
             Instruction::STOP => todo!("Should implement low pow mode"),
             Instruction::HALT => todo!("Should implement low pow mode and interrupts"),
 
@@ -211,7 +249,6 @@ impl CPU {
             Some(Condition::Zero) => self.regs.get_flag(FLAG_Z),
             Some(Condition::NonCarry) => !self.regs.get_flag(FLAG_C),
             Some(Condition::Carry) => self.regs.get_flag(FLAG_C),
-            // Some(_) => todo!("{:?} not implemented", cond)
         }
     }
 
