@@ -348,7 +348,7 @@ mod tests {
             ),
             (
                 vec![0x23],
-                Some(Instruction::INC16(Reg16::HL))
+                Some(Instruction::INC(Operand::Reg16(Reg16::HL)))
             ),
             (
                 vec![0x7],
@@ -363,15 +363,15 @@ mod tests {
             ),
             (
                 vec![0x2d],
-                Some(Instruction::DEC8(
-                    Reg8::L
+                Some(Instruction::DEC(
+                    Operand::Reg8(Reg8::L)
                 ))
             ),
             (
                 vec![0x72],
-                Some(Instruction::LD8RR(
-                    Reg8::HLderef,
-                    Reg8::D
+                Some(Instruction::LD(
+                    Operand::Reg8(Reg8::HLderef),
+                    Operand::Reg8(Reg8::D)
                 ))
             ),
             (
@@ -381,12 +381,14 @@ mod tests {
             (
                 vec![0xa9],
                 Some(Instruction::XOR(
+                    Operand::Reg8(Reg8::A),
                     Operand::Reg8(Reg8::C),
                 ))
             ),
             (
                 vec![0xc6, 0x08],
                 Some(Instruction::ADD(
+                    Operand::Reg8(Reg8::A),
                     Operand::Imm8,
                 ))
             ),
