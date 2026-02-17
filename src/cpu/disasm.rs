@@ -78,7 +78,9 @@ pub enum Operand {
     Imm16,
     Reg16(Reg16),
     AddrIndirect(Reg16),
-    AddrDirect16
+    AddrDirect16,
+    AddrIndirectLow8(Reg8),
+    AddrDirectLow8
 }
 
 #[derive(Default, Debug, PartialEq, Eq)]
@@ -129,6 +131,7 @@ pub enum Instruction {
 
     POP(Reg16),
     PUSH(Reg16),
+    LDH(Operand, Operand),
 
     DI,
     EI,
@@ -321,11 +324,38 @@ impl Instruction {
             0xc1..=0xf1 if (opcode & 0xcf) == 0xc5 =>
                 Some(Self::PUSH(Reg16::extract(opcode, Reg16Kind::Stk))),
 
+            0xe2 => Some(Self::LDH(
+                Operand::AddrIndirectLow8(Reg8::C),
+                Operand::Reg8(Reg8::A)
+            )),
+            0xe0 => Some(Self::LDH(
+                Operand::AddrDirectLow8,
+                Operand::Reg8(Reg8::A)
+            )),
+            0xea => Some(Self::LD(
+                Operand::AddrDirect16,
+                Operand::Reg8(Reg8::A)
+            )),
+            0xf2 => Some(Self::LDH(
+                Operand::Reg8(Reg8::A),
+                Operand::AddrIndirectLow8(Reg8::C),
+            )),
+            0xf0 => Some(Self::LDH(
+                Operand::Reg8(Reg8::A),
+                Operand::AddrDirectLow8,
+            )),
+            0xfa => Some(Self::LD(
+                Operand::Reg8(Reg8::A),
+                Operand::AddrDirect16,
+            )),
+
             0xcb => todo!("Prefix not implemented"),
 
             0xe8 => Some(Self::ADD(Operand::Reg16(Reg16::SP), Operand::Imm8)),
 
-
+            0xf3 => Some(Self::DI),
+            0xfb => Some(Self::EI),
+            
             // Hardlock instructions
             0xd3 | 0xdb | 0xdd | 0xe3 | 0xe4 | 0xeb | 0xec |
             0xed | 0xf4 | 0xfc | 0xfd => Some(Self::Hardlock),

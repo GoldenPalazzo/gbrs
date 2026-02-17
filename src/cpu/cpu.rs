@@ -98,7 +98,8 @@ impl CPU {
         match instr {
             Instruction::NOP => (),
             Instruction::JP(cond, op) => self.jump(bus, cond, op, false),
-            Instruction::LD(dst, src) => self.load(bus, dst, src),
+            Instruction::LD(dst, src) | Instruction::LDH(dst, src) =>
+                self.load(bus, dst, src),
             Instruction::INC(reg) => {
                 let dst_val = self.get_operand_value(bus, reg);
                 match reg {
@@ -281,7 +282,16 @@ impl CPU {
                 }
                 bus.read(addr) as u16
             }
-            Operand::AddrDirect16 => bus.read(self.read_word(bus)) as u16
+            Operand::AddrDirect16 => bus.read(self.read_word(bus)) as u16,
+            Operand::AddrIndirectLow8(r) => {
+                assert!(*r != Reg8::HLderef);
+                let addr = self.regs.get_reg8(r);
+                bus.read(0xff00 | (addr as u16)) as u16
+            },
+            Operand::AddrDirectLow8 => {
+                let addr = self.read_byte(bus);
+                bus.read(0xff00 | (addr as u16)) as u16
+            },
         }
     }
 
@@ -303,7 +313,16 @@ impl CPU {
                 }
                 bus.write8(addr, value as u8);
             }
-            Operand::AddrDirect16 => bus.write8(self.read_word(bus), value as u8)
+            Operand::AddrDirect16 => bus.write8(self.read_word(bus), value as u8),
+            Operand::AddrIndirectLow8(r) => {
+                assert!(*r != Reg8::HLderef);
+                let addr = self.regs.get_reg8(r);
+                bus.write8(0xff00 | (addr as u16), value as u8);
+            }
+            Operand::AddrDirectLow8 => {
+                let addr = self.read_byte(bus);
+                bus.write8(0xff00 | (addr as u16), value as u8);
+            }
         }
 
     }
