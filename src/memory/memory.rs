@@ -1,16 +1,24 @@
 use crate::memory::cartridge::Cartridge;
+use crate::memory::io::Serial;
 
 // [derive(Default)]
 pub struct MemoryBus {
     pub cart: Cartridge,
-    pub wram: [u8; 0x1000]
+    wram: [u8; 0x1000],
+    switchable_wram: [u8; 0x1000],
+    hram: [u8; 127],
+    
+    pub serial: Serial
 }
 
 impl Default for MemoryBus {
     fn default() -> Self {
         Self {
             cart: Cartridge::default(),
-            wram: [0u8; 0x1000]
+            wram: [0u8; 0x1000],
+            switchable_wram: [0u8; 0x1000],
+            hram: [0u8; 127],
+            serial: Serial::default()
         }
     }
 }
@@ -20,11 +28,11 @@ impl MemoryBus {
     //     Self::default()
     // }
 
-    pub fn from_file(path: &str) -> Self {
-        Self {
-            cart: Cartridge::from_file(path).unwrap(),
-            wram: [0u8; 0x1000]
-        }
+    pub fn from_file(path: &str) -> std::io::Result<Self> {
+        Ok(Self {
+            cart: Cartridge::from_file(path)?,
+            ..Default::default()
+        })
     }
 
 
@@ -32,6 +40,8 @@ impl MemoryBus {
         match addr {
             0x0000..=0x7fff => self.cart.mapper.read(addr),
             0xc000..=0xcfff => self.wram[(addr as usize)-0xc000],
+            0xd000..=0xdfff => self.switchable_wram[(addr as usize)-0xd000],
+            0xff80..=0xfffe => self.hram[(addr as usize)-0xff80],
             _ => 0xff
         }
     }
@@ -40,6 +50,9 @@ impl MemoryBus {
         match addr {
             0x0000..=0x7fff => self.cart.mapper.write(addr, data),
             0xc000..=0xcfff => self.wram[(addr as usize)-0xc000] = data,
+            0xd000..=0xdfff => self.switchable_wram[(addr as usize)-0xd000] = data,
+            0xe000..=0xfdff => panic!("Tried to write in echo ram 0x{:02X}!", addr),
+            0xff80..=0xfffe => self.hram[(addr as usize)-0xff80] = data,
             _ => todo!(
                 "Write to address 0x{:04X} hasn't been implemented yet",
                 addr

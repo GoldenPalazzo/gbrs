@@ -22,10 +22,11 @@ fn main() -> std::io::Result<()> {
     }
 
     let mut cpu = CPU::new();
-    let mut mem = MemoryBus::from_file(&args[1]);
+    let mut mem = MemoryBus::from_file(&args[1]).unwrap();
     println!("Loaded cart {:?}", mem.cart.title);
     let mut bp = false;
-    let bps = vec![0x20f];
+    // let bps = vec![0x20f];
+    let bps = vec![];
 
     loop {
         if bps.contains(&cpu.regs.get_pc()) { bp = true; }
