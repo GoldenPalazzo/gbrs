@@ -14,8 +14,10 @@ use log::{debug, info, warn, error};
 #[derive(Default)]
 pub struct CPU {
     pub regs: Registers,
+
     ime: bool,
-    ie: u8,
+    ime_pending: bool,
+    halted: bool
 }
 
 impl CPU {
@@ -60,6 +62,29 @@ impl CPU {
         }
     }
 
+    fn call(
+            &mut self,
+            bus: &mut MemoryBus,
+            cond: &Option<Condition>,
+        ) -> bool {
+        let push_pc = self.regs.get_pc().wrapping_add(2);
+        let jumped = self.jump(bus, cond, &Operand::Imm16, false);
+        if !jumped {return false}
+        self.regs.set_sp(self.regs.get_sp().wrapping_sub(2));
+        bus.write16(self.regs.get_sp(), push_pc);
+        true
+    }
+
+    fn ret(
+            &mut self,
+            bus: &mut MemoryBus,
+            cond: &Option<Condition>,
+        ) -> bool {
+        let jumped = self.jump(bus, cond, &Operand::AddrIndirect(Reg16::SP), false);
+        if !jumped {return false}
+        self.regs.set_sp(self.regs.get_sp().wrapping_add(2));
+        true
+    }
     fn jump(
                 &mut self,
                 bus: &MemoryBus,
@@ -341,8 +366,17 @@ impl CPU {
                 }
             }
 
-            Instruction::DI => {self.ime = false; 1},
-            Instruction::EI => {self.ime = true; 1},
+            Instruction::CALL(cond, Operand::Imm16) => {
+                if self.call(bus, cond) { 6 } else { 3 }
+            },
+            Instruction::RET(cond) => {
+                let res = self.ret(bus, cond);
+                if cond == &None {return 4}
+                if res {return 5} else {return 2}
+            }
+
+            Instruction::DI => {self.ime = false; self.ime_pending = false; 1},
+            Instruction::EI => {self.ime_pending = true; 1},
             Instruction::Hardlock => panic!("Hardlocked!"),
             _ => todo!("{:?} (0x{:02X}) not implemented",
                 instr, bus.read(self.regs.get_pc()))
