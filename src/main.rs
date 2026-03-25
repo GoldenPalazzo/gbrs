@@ -33,6 +33,7 @@ fn main() -> std::io::Result<()> {
         if bp {
             wait_for_enter();
         }
-        cpu.step(&mut mem);
+        let cycles = cpu.step(&mut mem);
+        mem.step(cycles);
     }
 }

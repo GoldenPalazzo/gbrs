@@ -1,5 +1,6 @@
 use crate::memory::cartridge::Cartridge;
 use crate::memory::io::Serial;
+use crate::memory::timer::Timer;
 
 // [derive(Default)]
 pub struct MemoryBus {
@@ -8,7 +9,8 @@ pub struct MemoryBus {
     switchable_wram: [u8; 0x1000],
     hram: [u8; 127],
     
-    pub serial: Serial
+    pub serial: Serial,
+    timer: Timer,
 }
 
 impl Default for MemoryBus {
@@ -18,7 +20,8 @@ impl Default for MemoryBus {
             wram: [0u8; 0x1000],
             switchable_wram: [0u8; 0x1000],
             hram: [0u8; 127],
-            serial: Serial::default()
+            serial: Serial::default(),
+            timer: Timer::default(),
         }
     }
 }
@@ -41,6 +44,7 @@ impl MemoryBus {
             0x0000..=0x7fff => self.cart.mapper.read(addr),
             0xc000..=0xcfff => self.wram[(addr as usize)-0xc000],
             0xd000..=0xdfff => self.switchable_wram[(addr as usize)-0xd000],
+            0xff04..=0xff07 => self.timer.read(addr),
             0xff80..=0xfffe => self.hram[(addr as usize)-0xff80],
             _ => 0xff
         }
@@ -51,6 +55,7 @@ impl MemoryBus {
             0x0000..=0x7fff => self.cart.mapper.write(addr, data),
             0xc000..=0xcfff => self.wram[(addr as usize)-0xc000] = data,
             0xd000..=0xdfff => self.switchable_wram[(addr as usize)-0xd000] = data,
+            0xff04..=0xff07 => self.timer.write(addr, data),
             0xe000..=0xfdff => panic!("Tried to write in echo ram 0x{:02X}!", addr),
             0xff80..=0xfffe => self.hram[(addr as usize)-0xff80] = data,
             _ => todo!(
@@ -64,5 +69,9 @@ impl MemoryBus {
         let bytes = data.to_le_bytes();
         self.write8(addr, bytes[0]);
         self.write8(addr.wrapping_add(1), bytes[1]);
+    }
+
+    pub fn step(&mut self, mcycles: u8) {
+        self.timer.step(mcycles);
     }
 }
