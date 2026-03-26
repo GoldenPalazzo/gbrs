@@ -14,9 +14,19 @@ fn wait_for_enter() {
 }
 
 fn main() -> std::io::Result<()> {
-    env_logger::init();
+    // env_logger::init();
+
+    let log_file = std::fs::File::create("cpu.log").unwrap();
+    env_logger::Builder::new()
+        .target(env_logger::Target::Pipe(Box::new(log_file)))
+        .filter_level(log::LevelFilter::Debug)
+        .format(|buf, record| {
+            use std::io::Write;
+            writeln!(buf, "{}", record.args())
+        })
+        .init();
     let args: Vec<String> = env::args().collect();
-    debug!("args: {:#?}", args);
+    // debug!("args: {:#?}", args);
     if args.len() < 2 {
         panic!("No program provided!");
     }

@@ -52,10 +52,25 @@ impl CPU {
         debug!("-----------------");
     }
 
+    pub fn print_state_doctor(&self, bus: &MemoryBus) {
+        let r = &self.regs;
+        let pc = r.get_pc();
+        debug!(
+            "A:{:02X} F:{:02X} B:{:02X} C:{:02X} D:{:02X} E:{:02X} H:{:02X} L:{:02X} SP:{:04X} PC:{:04X} PCMEM:{:02X},{:02X},{:02X},{:02X}",
+            r.get_a(), r.get_af() as u8,
+            r.get_b(), r.get_c(),
+            r.get_d(), r.get_e(),
+            r.get_h(), r.get_l(),
+            r.get_sp(), pc,
+            bus.read(pc), bus.read(pc+1), bus.read(pc+2), bus.read(pc+3)
+        );
+    }
+
     pub fn step(&mut self, mem_bus: &mut MemoryBus) -> u8 {
+        self.print_state_doctor(mem_bus);
         let opcode = self.read_byte(mem_bus);
         if let Some(instr) = Instruction::decode(opcode) {
-            debug!("{:04X}: {:?}", self.regs.get_pc().wrapping_sub(1), instr);
+            // debug!("{:04X}: {:?}", self.regs.get_pc().wrapping_sub(1), instr);
             self.execute_instruction(mem_bus, &instr)
         } else {
             error!(
@@ -386,7 +401,6 @@ impl CPU {
             _ => todo!("{:?} (0x{:02X}) not implemented",
                 instr, bus.read(self.regs.get_pc()))
         };
-        self.print_state();
         return res;
     }
 
