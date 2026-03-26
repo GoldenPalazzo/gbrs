@@ -12,48 +12,47 @@ impl Mapper for RomOnly {
     fn read(&self, addr: u16) -> u8 {
         match addr {
             0x0000..=0x3fff => self.data[addr as usize],
-            _ => panic!("Invalid read at 0x{:04X}", addr)
+            _ => panic!("Invalid read at 0x{:04X}", addr),
         }
     }
     fn write(&mut self, addr: u16, _data: u8) {
         match addr {
             0x0000..=0x3fff => panic!("Invalid write in ROM 0x{:04X}", addr),
-            _ => todo!()
+            _ => todo!(),
         }
     }
 }
 
 #[derive(Default)]
 pub struct Mbc1 {
-    data: Vec<u8>
+    data: Vec<u8>,
 }
 
 impl Mapper for Mbc1 {
     fn read(&self, addr: u16) -> u8 {
         match addr {
             0x0000..=0x7fff => self.data[addr as usize],
-            _ => panic!("Invalid read at 0x{:04X}", addr)
+            _ => panic!("Invalid read at 0x{:04X}", addr),
         }
     }
     fn write(&mut self, addr: u16, _data: u8) {
         match addr {
             0x0000..=0x7fff => panic!("Invalid write in ROM 0x{:04X}", addr),
-            _ => todo!()
+            _ => todo!(),
         }
     }
 }
 
-
 pub struct Cartridge {
     pub title: String,
-    pub mapper: Box<dyn Mapper>
+    pub mapper: Box<dyn Mapper>,
 }
 
 impl Default for Cartridge {
     fn default() -> Self {
         Self {
             title: String::default(),
-            mapper: Box::new(RomOnly::default())
+            mapper: Box::new(RomOnly::default()),
         }
     }
 }
@@ -70,13 +69,11 @@ impl Cartridge {
         let mapper: Box<dyn Mapper> = match hw_type {
             0x00 => Box::new(RomOnly { data }),
             0x01 => Box::new(Mbc1 { data }),
-            _ => todo!()
+            _ => todo!(),
         };
         Ok(Self {
             title: title,
-            mapper: mapper
+            mapper: mapper,
         })
     }
 }
-
-

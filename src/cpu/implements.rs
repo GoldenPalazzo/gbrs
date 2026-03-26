@@ -87,14 +87,14 @@ pub struct AluResult {
 }
 
 pub fn add_acc(a: u8, b: u8, carry: bool) -> AluResult {
-    let c = if carry {1} else {0};
+    let c = if carry { 1 } else { 0 };
     let res = a.wrapping_add(b).wrapping_add(c);
     AluResult {
         val: res as u16,
         z: Some(res == 0),
         n: Some(false),
         h: Some((a & 0xf) + (b & 0xf) + c > 0xf),
-        c: Some(res < a || res < b)
+        c: Some(res < a || res < b),
     }
 }
 
@@ -105,7 +105,7 @@ pub fn add_hl(hl: u16, b: u16) -> AluResult {
         z: None,
         n: Some(false),
         h: Some((hl & 0xfff) + (b & 0xfff) > 0xfff),
-        c: Some(res < hl || res < b)
+        c: Some(res < hl || res < b),
     }
 }
 
@@ -117,19 +117,19 @@ pub fn add_sp(sp: u16, b: i8) -> AluResult {
         z: Some(false),
         n: Some(false),
         h: Some((sp & 0xf) + (e8_u16 & 0xf) > 0xf),
-        c: Some((sp & 0xff) + (e8_u16 & 0xff) > 0xff)
+        c: Some((sp & 0xff) + (e8_u16 & 0xff) > 0xff),
     }
 }
 
 pub fn sub(dst: u8, src: u8, carry: bool) -> AluResult {
-    let c = if carry {1} else {0};
+    let c = if carry { 1 } else { 0 };
     let res = dst.wrapping_sub(src).wrapping_sub(c);
     AluResult {
         val: res as u16,
         z: Some(res == 0),
         n: Some(true),
         h: Some((dst & 0xf) < (src & 0xf) + c),
-        c: Some(src as u16 + c as u16 > dst as u16)
+        c: Some(src as u16 + c as u16 > dst as u16),
     }
 }
 
@@ -142,7 +142,10 @@ pub fn inc_u8(dst: u8) -> AluResult {
 pub fn inc_u16(dst: u16) -> AluResult {
     AluResult {
         val: dst.wrapping_add(1),
-        z:None, n:None, h:None, c:None
+        z: None,
+        n: None,
+        h: None,
+        c: None,
     }
 }
 
@@ -155,10 +158,12 @@ pub fn dec_u8(dst: u8) -> AluResult {
 pub fn dec_u16(dst: u16) -> AluResult {
     AluResult {
         val: dst.wrapping_sub(1),
-        z:None, n:None, h:None, c:None
+        z: None,
+        n: None,
+        h: None,
+        c: None,
     }
 }
-
 
 pub fn lrotate(a: u8, allow_zero: bool, old_carry: Option<bool>) -> AluResult {
     let mut res = a.rotate_left(1);
@@ -166,7 +171,7 @@ pub fn lrotate(a: u8, allow_zero: bool, old_carry: Option<bool>) -> AluResult {
     if let Some(c) = old_carry {
         match c {
             true => res |= 1,
-            false => res &= 0xfe
+            false => res &= 0xfe,
         }
     }
     AluResult {
@@ -184,7 +189,7 @@ pub fn rrotate(a: u8, allow_zero: bool, old_carry: Option<bool>) -> AluResult {
     if let Some(c) = old_carry {
         match c {
             true => res |= 0x80,
-            false => res &= 0x7f
+            false => res &= 0x7f,
         }
     }
     AluResult {
@@ -196,12 +201,12 @@ pub fn rrotate(a: u8, allow_zero: bool, old_carry: Option<bool>) -> AluResult {
     }
 }
 
-pub fn complement(a: u8) -> AluResult { 
+pub fn complement(a: u8) -> AluResult {
     AluResult {
         val: (!a) as u16,
         z: None,
         n: Some(true),
         h: Some(true),
-        c: None
+        c: None,
     }
 }

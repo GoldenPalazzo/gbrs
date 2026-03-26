@@ -1,7 +1,7 @@
-const DIV_ADDR : u16 = 0xff04;
+const DIV_ADDR: u16 = 0xff04;
 const TIMA_ADDR: u16 = 0xff05;
-const TMA_ADDR : u16 = 0xff06;
-const TAC_ADDR : u16 = 0xff07;
+const TMA_ADDR: u16 = 0xff06;
+const TAC_ADDR: u16 = 0xff07;
 
 pub struct Timer {
     internal_timer: u16,
@@ -33,21 +33,21 @@ impl Timer {
             TIMA_ADDR => self.tima,
             TMA_ADDR => self.tma,
             TAC_ADDR => self.tac,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
-    // NOTE: manca il glitch del falling edge quando si scrive su TAC. 
+    // NOTE: manca il glitch del falling edge quando si scrive su TAC.
     pub fn write(&mut self, addr: u16, data: u8) {
         match addr {
             DIV_ADDR => self.internal_timer = 0,
             TIMA_ADDR => {
                 self.write_to_tima = true;
                 self.tima = data;
-            },
+            }
             TMA_ADDR => self.tma = data,
             TAC_ADDR => self.tac = data,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -60,7 +60,7 @@ impl Timer {
         self.need_to_update_tima = false;
         self.write_to_tima = false;
 
-        let tcycles = mcycles*4;
+        let tcycles = mcycles * 4;
         let old_edge = self.get_timer_edge();
         self.internal_timer = self.internal_timer.wrapping_add(tcycles as u16);
         let edge = self.get_timer_edge();
@@ -85,15 +85,15 @@ impl Timer {
     }
 
     fn get_timer_edge(&self) -> bool {
-        (self.tac & 4) > 0 && match self.tac & 0b11 {
-            0 => (self.internal_timer & 0x0200) > 0,
-            1 => (self.internal_timer & 0x0008) > 0,
-            2 => (self.internal_timer & 0x0020) > 0,
-            3 => (self.internal_timer & 0x0080) > 0,
-            _ => unreachable!(),
-        }
+        (self.tac & 4) > 0
+            && match self.tac & 0b11 {
+                0 => (self.internal_timer & 0x0200) > 0,
+                1 => (self.internal_timer & 0x0008) > 0,
+                2 => (self.internal_timer & 0x0020) > 0,
+                3 => (self.internal_timer & 0x0080) > 0,
+                _ => unreachable!(),
+            }
     }
-
 }
 
 #[cfg(test)]

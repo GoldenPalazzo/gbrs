@@ -1,11 +1,11 @@
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Interrupt {
-    VBlank  = 0b00001,
+    VBlank = 0b00001,
     LcdStat = 0b00010,
-    Timer   = 0b00100,
-    Serial  = 0b01000,
-    Joypad  = 0b10000,
+    Timer = 0b00100,
+    Serial = 0b01000,
+    Joypad = 0b10000,
 }
 
 const IE_ADDR: u16 = 0xffff;
@@ -31,7 +31,7 @@ impl InterruptController {
         match addr {
             IE_ADDR => self.ie,
             IF_ADDR => self.if_ | 0xe0,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -39,7 +39,7 @@ impl InterruptController {
         match addr {
             IE_ADDR => self.ie = data,
             IF_ADDR => self.if_ = data & 0x1f,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 }

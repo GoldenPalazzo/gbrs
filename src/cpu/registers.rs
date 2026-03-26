@@ -1,7 +1,5 @@
+use crate::cpu::disasm::{Reg8, Reg16};
 use paste::paste;
-use crate::cpu::disasm::{
-    Reg8, Reg16,
-};
 
 #[derive(Default)]
 #[allow(dead_code)]
@@ -15,8 +13,7 @@ pub struct Registers {
     h: u8,
     l: u8,
     sp: u16,
-    pc: u16
-
+    pc: u16,
 }
 
 macro_rules! get_set {
@@ -122,7 +119,10 @@ impl Registers {
     }
 
     pub fn set_flag(&mut self, flag: u8, value: bool) {
-        if value { self.f |= flag; }
-        else { self.f &= !flag; }
+        if value {
+            self.f |= flag;
+        } else {
+            self.f &= !flag;
+        }
     }
 }

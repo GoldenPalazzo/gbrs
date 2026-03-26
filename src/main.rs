@@ -4,8 +4,8 @@ use crate::cpu::cpu::CPU;
 use crate::memory::memory::MemoryBus;
 
 use log::debug;
-use std::io::{self, Write};
 use std::env;
+use std::io::{self, Write};
 
 fn wait_for_enter() {
     let mut input = String::new();
@@ -39,7 +39,9 @@ fn main() -> std::io::Result<()> {
     let bps = vec![];
 
     loop {
-        if bps.contains(&cpu.regs.get_pc()) { bp = true; }
+        if bps.contains(&cpu.regs.get_pc()) {
+            bp = true;
+        }
         if bp {
             wait_for_enter();
         }
