@@ -23,6 +23,11 @@ pub struct CPU {
 impl CPU {
     pub fn new() -> Self {
         let mut new = Self::default();
+        new.regs.set_af(0x01B0);
+        new.regs.set_bc(0x0013);
+        new.regs.set_de(0x00D8);
+        new.regs.set_hl(0x014D);
+        new.regs.set_sp(0xFFFE);
         new.regs.set_pc(0x100);
         new
     }
