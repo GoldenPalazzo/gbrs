@@ -419,6 +419,18 @@ impl CPU {
                 if res {return 5} else {return 2}
             }
 
+            Instruction::POP(r) => {
+                let val = self.pop(bus);
+                self.regs.set_reg16(r, val);
+                3
+            },
+
+            Instruction::PUSH(r) => {
+                let val = self.regs.get_reg16(r);
+                self.push(bus, val);
+                4
+            },
+
             Instruction::DI => {self.ime = false; self.ime_pending = false; 1},
             Instruction::EI => {self.ime_pending = true; 1},
             Instruction::Hardlock => panic!("Hardlocked!"),
