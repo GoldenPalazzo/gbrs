@@ -195,7 +195,7 @@ impl CPU {
             },
             Instruction::ADD(dst, src) => {
                 let dst_val = self.get_operand_value(bus, dst);
-                let src_val = self.get_operand_value(bus, dst);
+                let src_val = self.get_operand_value(bus, src);
                 match (dst, src) {
                     (Operand::Reg16(Reg16::HL), Operand::Reg16(_)) => {
                         self.apply_alu(
@@ -232,11 +232,11 @@ impl CPU {
             Instruction::ADC(dst, src) => match (dst, src) {
                 (Operand::Reg8(Reg8::A), _) => {
                     let dst_val = self.get_operand_value(bus, dst);
-                    let src_val = self.get_operand_value(bus, dst);
+                    let src_val = self.get_operand_value(bus, src);
                     self.apply_alu(
                         bus,
                         Some(dst),
-                        &add_acc(dst_val as u8, src_val as u8, true)
+                        &add_acc(dst_val as u8, src_val as u8, self.regs.get_flag(FLAG_C))
                     );
                     match src {
                         Operand::Reg8(Reg8::HLderef)
@@ -250,7 +250,7 @@ impl CPU {
             Instruction::SUB(dst, src) => match (dst, src) {
                 (Operand::Reg8(Reg8::A), _) => {
                     let dst_val = self.get_operand_value(bus, dst);
-                    let src_val = self.get_operand_value(bus, dst);
+                    let src_val = self.get_operand_value(bus, src);
                     self.apply_alu(
                         bus,
                         Some(dst),
@@ -268,7 +268,7 @@ impl CPU {
             Instruction::SBC(dst, src) => match (dst, src) {
                 (Operand::Reg8(Reg8::A), _) => {
                     let dst_val = self.get_operand_value(bus, dst);
-                    let src_val = self.get_operand_value(bus, dst);
+                    let src_val = self.get_operand_value(bus, src);
                     self.apply_alu(
                         bus,
                         Some(dst),
