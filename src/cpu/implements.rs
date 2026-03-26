@@ -233,6 +233,17 @@ pub fn or(a: u8, op: u8) -> AluResult {
     }
 }
 
+pub fn xor(a: u8, op: u8) -> AluResult {
+    let val = (a ^ op) as u16;
+    AluResult {
+        val: Some(val),
+        z: Some(val == 0),
+        n: Some(false),
+        h: Some(false),
+        c: Some(false),
+    }
+}
+
 pub fn compare(a: u8, op: u8) -> AluResult {
     let res = sub(a, op, false);
     AluResult { val: None, ..res }

@@ -318,9 +318,29 @@ impl Cpu {
                     _ => unreachable!(),
                 }
             }
+            Instruction::AND(Operand::Reg8(Reg8::A), op) => {
+                let val = self.get_operand_value(bus, op) as u8;
+                let res = and(self.regs.get_a(), val);
+                self.apply_alu(bus, Some(&Operand::Reg8(Reg8::A)), &res);
+                match op {
+                    Operand::Reg8(Reg8::HLderef) | Operand::Imm8 => 2,
+                    Operand::Reg8(_) => 1,
+                    _ => unreachable!(),
+                }
+            }
             Instruction::OR(Operand::Reg8(Reg8::A), op) => {
                 let val = self.get_operand_value(bus, op) as u8;
                 let res = or(self.regs.get_a(), val);
+                self.apply_alu(bus, Some(&Operand::Reg8(Reg8::A)), &res);
+                match op {
+                    Operand::Reg8(Reg8::HLderef) | Operand::Imm8 => 2,
+                    Operand::Reg8(_) => 1,
+                    _ => unreachable!(),
+                }
+            }
+            Instruction::XOR(Operand::Reg8(Reg8::A), op) => {
+                let val = self.get_operand_value(bus, op) as u8;
+                let res = xor(self.regs.get_a(), val);
                 self.apply_alu(bus, Some(&Operand::Reg8(Reg8::A)), &res);
                 match op {
                     Operand::Reg8(Reg8::HLderef) | Operand::Imm8 => 2,
