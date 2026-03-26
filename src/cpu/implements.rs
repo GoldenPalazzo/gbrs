@@ -210,3 +210,25 @@ pub fn complement(a: u8) -> AluResult {
         c: None,
     }
 }
+
+pub fn and(a: u8, op: u8) -> AluResult {
+    let val = (a & op) as u16;
+    AluResult {
+        val,
+        z: Some(val == 0),
+        n: Some(false),
+        h: Some(true),
+        c: Some(false),
+    }
+}
+
+pub fn or(a: u8, op: u8) -> AluResult {
+    let val = (a | op) as u16;
+    AluResult {
+        val,
+        z: Some(val == 0),
+        n: Some(false),
+        h: Some(false),
+        c: Some(false),
+    }
+}

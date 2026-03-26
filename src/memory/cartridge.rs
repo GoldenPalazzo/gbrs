@@ -71,9 +71,6 @@ impl Cartridge {
             0x01 => Box::new(Mbc1 { data }),
             _ => todo!(),
         };
-        Ok(Self {
-            title,
-            mapper,
-        })
+        Ok(Self { title, mapper })
     }
 }
