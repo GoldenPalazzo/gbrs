@@ -321,7 +321,7 @@ impl Instruction {
             0xc1..=0xf1 if (opcode & 0xcf) == 0xc1 =>
                 Some(Self::POP(Reg16::extract(opcode, Reg16Kind::Stk))),
 
-            0xc1..=0xf1 if (opcode & 0xcf) == 0xc5 =>
+            0xc5..=0xf5 if (opcode & 0xcf) == 0xc5 =>
                 Some(Self::PUSH(Reg16::extract(opcode, Reg16Kind::Stk))),
 
             0xe2 => Some(Self::LDH(
