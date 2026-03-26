@@ -1,9 +1,8 @@
 mod cpu;
 mod memory;
-use crate::cpu::cpu::CPU;
+use crate::cpu::cpu::Cpu;
 use crate::memory::memory::MemoryBus;
 
-use log::debug;
 use std::env;
 use std::io::{self, Write};
 
@@ -31,12 +30,12 @@ fn main() -> std::io::Result<()> {
         panic!("No program provided!");
     }
 
-    let mut cpu = CPU::new();
+    let mut cpu = Cpu::new();
     let mut mem = MemoryBus::from_file(&args[1]).unwrap();
     println!("Loaded cart {:?}", mem.cart.title);
     let mut bp = false;
     // let bps = vec![0x20f];
-    let bps = vec![];
+    let bps = [];
 
     loop {
         if bps.contains(&cpu.regs.get_pc()) {

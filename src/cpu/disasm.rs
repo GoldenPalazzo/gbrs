@@ -96,6 +96,7 @@ pub enum Operand {
 }
 
 #[derive(Default, Debug, PartialEq, Eq)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum Instruction {
     // Block 0
     #[default]

@@ -72,8 +72,8 @@ impl Cartridge {
             _ => todo!(),
         };
         Ok(Self {
-            title: title,
-            mapper: mapper,
+            title,
+            mapper,
         })
     }
 }

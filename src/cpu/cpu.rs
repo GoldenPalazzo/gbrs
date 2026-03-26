@@ -7,7 +7,7 @@ use crate::cpu::registers::*;
 use log::{debug, error, info, warn};
 
 #[derive(Default)]
-pub struct CPU {
+pub struct Cpu {
     pub regs: Registers,
 
     ime: bool,
@@ -15,7 +15,7 @@ pub struct CPU {
     halted: bool,
 }
 
-impl CPU {
+impl Cpu {
     pub fn new() -> Self {
         let mut new = Self::default();
         new.regs.set_af(0x01B0);
@@ -408,7 +408,7 @@ impl CPU {
             }
             Instruction::RET(cond) => {
                 let res = self.ret(bus, cond);
-                if cond == &None {
+                if cond.is_none() {
                     return 4;
                 }
                 if res { return 5 } else { return 2 }
@@ -442,7 +442,7 @@ impl CPU {
                 bus.read(self.regs.get_pc())
             ),
         };
-        return res;
+        res
     }
 
     fn check_cond(&self, cond: &Option<Condition>) -> bool {
@@ -505,7 +505,7 @@ impl CPU {
             | Operand::Reg16(Reg16::HLminus) => unreachable!(),
             Operand::Reg8(Reg8::HLderef) => bus.write8(self.regs.get_hl(), value as u8),
             Operand::Reg8(r) => self.regs.set_reg8(r, value as u8),
-            Operand::Reg16(r) => self.regs.set_reg16(r, value as u16),
+            Operand::Reg16(r) => self.regs.set_reg16(r, value),
             Operand::AddrIndirect(r) => {
                 let addr = self.regs.get_reg16(r);
                 match r {
