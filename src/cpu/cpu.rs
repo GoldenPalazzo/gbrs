@@ -167,8 +167,8 @@ impl Cpu {
         if let Some(c) = res.c {
             self.regs.set_flag(FLAG_C, c);
         }
-        if let Some(op) = dst {
-            self.set_operand_value(bus, op, res.val);
+        if let (Some(op), Some(val)) = (dst, res.val) {
+            self.set_operand_value(bus, op, val);
         }
     }
 
@@ -308,6 +308,16 @@ impl Cpu {
                 }
                 _ => unreachable!(),
             },
+            Instruction::CP(Operand::Reg8(Reg8::A), op) => {
+                let val = self.get_operand_value(bus, op) as u8;
+                let res = compare(self.regs.get_a(), val);
+                self.apply_alu(bus, None, &res);
+                match op {
+                    Operand::Reg8(Reg8::HLderef) | Operand::Imm8 => 2,
+                    Operand::Reg8(_) => 1,
+                    _ => unreachable!(),
+                }
+            }
             Instruction::OR(Operand::Reg8(Reg8::A), op) => {
                 let val = self.get_operand_value(bus, op) as u8;
                 let res = or(self.regs.get_a(), val);
@@ -372,7 +382,7 @@ impl Cpu {
                     bus,
                     None,
                     &AluResult {
-                        val: 0,
+                        val: None,
                         z: None,
                         n: Some(false),
                         h: Some(false),
@@ -386,7 +396,7 @@ impl Cpu {
                     bus,
                     None,
                     &AluResult {
-                        val: 0,
+                        val: None,
                         z: None,
                         n: Some(false),
                         h: Some(false),
