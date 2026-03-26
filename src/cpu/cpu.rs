@@ -68,6 +68,13 @@ impl CPU {
 
     pub fn step(&mut self, mem_bus: &mut MemoryBus) -> u8 {
         self.print_state_doctor(mem_bus);
+        if self.ime_pending {
+            self.ime_pending = false;
+            self.ime = true;
+        }
+        if self.handle_interrupts(mem_bus) {
+            return 5;
+        }
         let opcode = self.read_byte(mem_bus);
         if let Some(instr) = Instruction::decode(opcode) {
             // debug!("{:04X}: {:?}", self.regs.get_pc().wrapping_sub(1), instr);
@@ -90,8 +97,7 @@ impl CPU {
         let push_pc = self.regs.get_pc().wrapping_add(2);
         let jumped = self.jump(bus, cond, &Operand::Imm16, false);
         if !jumped {return false}
-        self.regs.set_sp(self.regs.get_sp().wrapping_sub(2));
-        bus.write16(self.regs.get_sp(), push_pc);
+        self.push(bus, push_pc);
         true
     }
 
@@ -102,7 +108,7 @@ impl CPU {
         ) -> bool {
         let jumped = self.jump(bus, cond, &Operand::AddrIndirect(Reg16::SP), false);
         if !jumped {return false}
-        self.regs.set_sp(self.regs.get_sp().wrapping_add(2));
+        self.pop(bus);
         true
     }
     fn jump(
@@ -122,6 +128,19 @@ impl CPU {
             self.regs.set_pc(addr);
         }
         true
+    }
+
+    fn push(&mut self, bus: &mut MemoryBus, val: u16) {
+        let sp = self.regs.get_sp().wrapping_sub(2);
+        self.regs.set_sp(sp);
+        bus.write16(sp, val);
+    }
+
+    fn pop(&mut self, bus: &MemoryBus) -> u16 {
+        let sp = self.regs.get_sp();
+        let val = bus.read(sp) as u16 | ((bus.read(sp.wrapping_add(1)) as u16) << 8);
+        self.regs.set_sp(sp.wrapping_add(2));
+        val
     }
 
     fn load(&mut self, bus: &mut MemoryBus, dst: &Operand, src: &Operand) {
@@ -486,6 +505,22 @@ impl CPU {
             }
         }
 
+    }
+
+    fn handle_interrupts(&mut self, mem_bus: &mut MemoryBus) -> bool {
+        let pending = mem_bus.interrupts.pending();
+        if pending != 0 && self.halted {
+            self.halted = false;
+        }
+        if !self.ime || pending == 0 {
+            return false;
+        }
+        let bit = pending.trailing_zeros() as u16;
+        self.ime = false;
+        mem_bus.interrupts.if_ &= !(1 << bit);
+        self.push(mem_bus, self.regs.get_pc());
+        self.regs.set_pc(0x40 + bit * 8);
+        true
     }
 
     fn read_byte(&mut self, bus: &MemoryBus) -> u8 {
