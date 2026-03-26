@@ -148,7 +148,21 @@ pub enum Instruction {
     DI,
     EI,
 
+    // Prefixed
+    RLC(Operand),
+    RRC(Operand),
+    RL(Operand),
+    RR(Operand),
+    SLA(Operand),
+    SRA(Operand),
+    SWAP(Operand),
+    SRL(Operand),
+    BIT(u8, Operand),
+    RES(u8, Operand),
+    SET(u8, Operand),
+
     Hardlock,
+    Prefix,
 }
 
 impl Instruction {
@@ -306,7 +320,7 @@ impl Instruction {
             0xf0 => Some(Self::LDH(Operand::Reg8(Reg8::A), Operand::AddrDirectLow8)),
             0xfa => Some(Self::LD(Operand::Reg8(Reg8::A), Operand::AddrDirect16)),
 
-            0xcb => todo!("Prefix not implemented"),
+            0xcb => Some(Self::Prefix),
 
             0xe8 => Some(Self::ADD(Operand::Reg16(Reg16::SP), Operand::Imm8)),
 
@@ -319,6 +333,29 @@ impl Instruction {
             }
 
             _ => None,
+        }
+    }
+
+    pub fn decode_cb(opcode: u8) -> Self {
+        let operand = Operand::Reg8(Reg8::extract(opcode, 0));
+        let bit = (opcode >> 3) & 7;
+
+        match opcode >> 6 {
+            0 => match bit {
+                0 => Self::RLC(operand),
+                1 => Self::RRC(operand),
+                2 => Self::RL(operand),
+                3 => Self::RR(operand),
+                4 => Self::SLA(operand),
+                5 => Self::SRA(operand),
+                6 => Self::SWAP(operand),
+                7 => Self::SRL(operand),
+                _ => unreachable!(),
+            },
+            1 => Self::BIT(bit, operand),
+            2 => Self::RES(bit, operand),
+            3 => Self::SET(bit, operand),
+            _ => unreachable!(),
         }
     }
 }

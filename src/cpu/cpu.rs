@@ -89,7 +89,13 @@ impl Cpu {
         let opcode = self.read_byte(mem_bus);
         if let Some(instr) = Instruction::decode(opcode) {
             // debug!("{:04X}: {:?}", self.regs.get_pc().wrapping_sub(1), instr);
-            self.execute_instruction(mem_bus, &instr)
+            match instr {
+                Instruction::Prefix => {
+                    let next_opcode = Instruction::decode_cb(self.read_byte(mem_bus));
+                    self.execute_instruction(mem_bus, &next_opcode)
+                }
+                _ => self.execute_instruction(mem_bus, &instr),
+            }
         } else {
             error!(
                 "Invalid opcode 0x{:02X} at 0x{:04X}",
