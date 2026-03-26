@@ -6,6 +6,7 @@ use crate::memory::timer::Timer;
 // [derive(Default)]
 pub struct MemoryBus {
     pub cart: Cartridge,
+    vram: [u8; 0x2000],
     wram: [u8; 0x1000],
     switchable_wram: [u8; 0x1000],
     hram: [u8; 127],
@@ -19,6 +20,7 @@ impl Default for MemoryBus {
     fn default() -> Self {
         Self {
             cart: Cartridge::default(),
+            vram: [0u8; 0x2000],
             wram: [0u8; 0x1000],
             switchable_wram: [0u8; 0x1000],
             hram: [0u8; 127],
@@ -44,6 +46,7 @@ impl MemoryBus {
     pub fn read(&self, addr: u16) -> u8 {
         match addr {
             0x0000..=0x7fff => self.cart.mapper.read(addr),
+            0x8000..=0x9fff => self.vram[(addr as usize) - 0x8000],
             0xc000..=0xcfff => self.wram[(addr as usize) - 0xc000],
             0xd000..=0xdfff => self.switchable_wram[(addr as usize) - 0xd000],
             0xff04..=0xff07 => self.timer.read(addr),
@@ -57,6 +60,7 @@ impl MemoryBus {
     pub fn write8(&mut self, addr: u16, data: u8) {
         match addr {
             0x0000..=0x7fff => self.cart.mapper.write(addr, data),
+            0x8000..=0x9fff => self.vram[(addr as usize) - 0x8000] = data,
             0xc000..=0xcfff => self.wram[(addr as usize) - 0xc000] = data,
             0xd000..=0xdfff => self.switchable_wram[(addr as usize) - 0xd000] = data,
             0xff04..=0xff07 => self.timer.write(addr, data),
