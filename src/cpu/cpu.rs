@@ -527,19 +527,19 @@ impl Cpu {
             }
 
             Instruction::RLC(Operand::Reg8(reg)) => {
-                let val = self.regs.get_reg8(reg);
+                let val = self.get_operand_value(bus, &Operand::Reg8(*reg)) as u8;
                 self.apply_alu(bus, Some(&Operand::Reg8(*reg)), &lrotate(val, true, None));
                 1
             }
 
             Instruction::RRC(Operand::Reg8(reg)) => {
-                let val = self.regs.get_reg8(reg);
+                let val = self.get_operand_value(bus, &Operand::Reg8(*reg)) as u8;
                 self.apply_alu(bus, Some(&Operand::Reg8(*reg)), &rrotate(val, true, None));
                 1
             }
 
             Instruction::RL(Operand::Reg8(reg)) => {
-                let val = self.regs.get_reg8(reg);
+                let val = self.get_operand_value(bus, &Operand::Reg8(*reg)) as u8;
                 self.apply_alu(
                     bus,
                     Some(&Operand::Reg8(*reg)),
@@ -549,7 +549,7 @@ impl Cpu {
             }
 
             Instruction::RR(Operand::Reg8(reg)) => {
-                let val = self.regs.get_reg8(reg);
+                let val = self.get_operand_value(bus, &Operand::Reg8(*reg)) as u8;
                 self.apply_alu(
                     bus,
                     Some(&Operand::Reg8(*reg)),
