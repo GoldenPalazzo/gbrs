@@ -296,3 +296,35 @@ pub fn swap(a: u8) -> AluResult {
         c: Some(false),
     }
 }
+
+pub fn bit(u: u8, r8: u8) -> AluResult {
+    AluResult {
+        val: None,
+        z: Some(r8 & (1 << u) == 0),
+        n: Some(false),
+        h: Some(true),
+        c: None,
+    }
+}
+
+pub fn set(u: u8, r8: u8) -> AluResult {
+    let res = r8 | (1 << u);
+    AluResult {
+        val: Some(res as u16),
+        z: None,
+        n: None,
+        h: None,
+        c: None,
+    }
+}
+
+pub fn reset(u: u8, r8: u8) -> AluResult {
+    let res = r8 & !(1 << u);
+    AluResult {
+        val: Some(res as u16),
+        z: None,
+        n: None,
+        h: None,
+        c: None,
+    }
+}

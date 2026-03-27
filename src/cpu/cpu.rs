@@ -576,6 +576,32 @@ impl Cpu {
                 }
             }
 
+            Instruction::BIT(n, Operand::Reg8(reg)) => {
+                let res = bit(*n, self.get_operand_value(bus, &Operand::Reg8(*reg)) as u8);
+                self.apply_alu(bus, None, &res);
+                match reg {
+                    Reg8::HLderef => 4,
+                    _ => 2,
+                }
+            }
+
+            Instruction::SET(n, Operand::Reg8(reg)) => {
+                let res = set(*n, self.get_operand_value(bus, &Operand::Reg8(*reg)) as u8);
+                self.apply_alu(bus, Some(&Operand::Reg8(*reg)), &res);
+                match reg {
+                    Reg8::HLderef => 4,
+                    _ => 2,
+                }
+            }
+            Instruction::RES(n, Operand::Reg8(reg)) => {
+                let res = reset(*n, self.get_operand_value(bus, &Operand::Reg8(*reg)) as u8);
+                self.apply_alu(bus, Some(&Operand::Reg8(*reg)), &res);
+                match reg {
+                    Reg8::HLderef => 4,
+                    _ => 2,
+                }
+            }
+
             Instruction::Hardlock => panic!("Hardlocked!"),
             _ => todo!(
                 "{:?} (0x{:02X}) not implemented",
