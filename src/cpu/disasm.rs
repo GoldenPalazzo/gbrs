@@ -93,6 +93,7 @@ pub enum Operand {
     AddrDirect16,
     AddrIndirectLow8(Reg8),
     AddrDirectLow8,
+    SPplusImm8,
 }
 
 #[derive(Default, Debug, PartialEq, Eq)]
@@ -318,6 +319,7 @@ impl Instruction {
                 Operand::AddrIndirectLow8(Reg8::C),
             )),
             0xf0 => Some(Self::LDH(Operand::Reg8(Reg8::A), Operand::AddrDirectLow8)),
+            0xf8 => Some(Self::LD(Operand::Reg16(Reg16::HL), Operand::SPplusImm8)),
             0xf9 => Some(Self::LD(
                 Operand::Reg16(Reg16::SP),
                 Operand::Reg16(Reg16::HL),

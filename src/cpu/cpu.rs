@@ -127,7 +127,13 @@ impl Cpu {
         self.pop(bus);
         true
     }
-    fn jump(&mut self, bus: &MemoryBus, cond: &Option<Condition>, op: &Operand, rel: bool) -> bool {
+    fn jump(
+        &mut self,
+        bus: &mut MemoryBus,
+        cond: &Option<Condition>,
+        op: &Operand,
+        rel: bool,
+    ) -> bool {
         let addr = self.get_operand_value(bus, op);
         if !self.check_cond(cond) {
             return false;
@@ -211,10 +217,9 @@ impl Cpu {
                     (Operand::Reg16(_), Operand::Imm16) => 3,
                     (Operand::AddrIndirect(_), Operand::Reg8(Reg8::A)) => 2,
                     (Operand::AddrDirect16, Operand::Reg8(Reg8::A)) => 4,
-                    // missing
-                    // LD [imm16],SP
-                    // LD HL,SP+imm8
-                    _ => todo!(),
+                    // (Operand::AddrDirect16, Operand::Reg16(Reg16::SP)) => 5,
+                    (Operand::Reg16(Reg16::HL), Operand::SPplusImm8) => 3,
+                    _ => unreachable!("(dst={:?}, src={:?}) not valid for LD", dst, src),
                 }
             }
             Instruction::INC(reg) => {
@@ -534,7 +539,7 @@ impl Cpu {
         }
     }
 
-    fn get_operand_value(&mut self, bus: &MemoryBus, op: &Operand) -> u16 {
+    fn get_operand_value(&mut self, bus: &mut MemoryBus, op: &Operand) -> u16 {
         match op {
             Operand::Reg8(r) => {
                 if let Reg8::HLderef = r {
@@ -573,6 +578,12 @@ impl Cpu {
                 let addr = self.read_byte(bus);
                 bus.read(0xff00 | (addr as u16)) as u16
             }
+            Operand::SPplusImm8 => {
+                let e8 = self.read_byte(bus);
+                let res = add_sp(self.regs.get_sp(), e8 as i8);
+                self.apply_alu(bus, None, &res);
+                res.val.unwrap()
+            }
         }
     }
 
@@ -604,6 +615,7 @@ impl Cpu {
                 let addr = self.read_byte(bus);
                 bus.write8(0xff00 | (addr as u16), value as u8);
             }
+            Operand::SPplusImm8 => unreachable!("{:?} is impossible to have as destination!", op),
         }
     }
 
@@ -633,5 +645,42 @@ impl Cpu {
         let low = self.read_byte(bus) as u16;
         let high = self.read_byte(bus) as u16;
         (high << 8) | low
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::memory::memory::MemoryBus;
+
+    fn make_cpu_mem(rom: &[u8]) -> (Cpu, MemoryBus) {
+        let mut cpu = Cpu::new();
+        let mut mem = MemoryBus::default();
+        // scrivi i byte direttamente nella HRAM per evitare il mapper
+        for (i, &b) in rom.iter().enumerate() {
+            mem.write8(0xff80 + i as u16, b);
+        }
+        cpu.regs.set_pc(0xff80);
+        (cpu, mem)
+    }
+
+    #[test]
+    fn test_ld_hl_sp_plus_e8() {
+        let (mut cpu, mut mem) = make_cpu_mem(&[0xF8, 0x01]); // LD HL, SP+1
+        cpu.regs.set_sp(0x0000);
+        cpu.regs.set_hl(0x0000);
+        cpu.step(&mut mem);
+        assert_eq!(cpu.regs.get_hl(), 0x0001);
+        // flag H e C devono essere 0 in questo caso
+        assert!(!cpu.regs.get_flag(FLAG_H));
+        assert!(!cpu.regs.get_flag(FLAG_C));
+    }
+
+    #[test]
+    fn test_ld_hl_sp_plus_e8_negative() {
+        let (mut cpu, mut mem) = make_cpu_mem(&[0xF8, 0xFF]); // LD HL, SP+(-1)
+        cpu.regs.set_sp(0x0002);
+        cpu.step(&mut mem);
+        assert_eq!(cpu.regs.get_hl(), 0x0001);
     }
 }
