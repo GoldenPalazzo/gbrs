@@ -410,7 +410,19 @@ impl Cpu {
                 );
                 1
             }
-            Instruction::DAA => todo!("Implementing BCD instrs later"),
+            Instruction::DAA => {
+                self.apply_alu(
+                    bus,
+                    Some(&Operand::Reg8(Reg8::A)),
+                    &daa(
+                        self.regs.get_reg8(&Reg8::A),
+                        self.regs.get_flag(FLAG_N),
+                        self.regs.get_flag(FLAG_H),
+                        self.regs.get_flag(FLAG_C),
+                    ),
+                );
+                1
+            }
             Instruction::CPL => {
                 self.apply_alu(
                     bus,

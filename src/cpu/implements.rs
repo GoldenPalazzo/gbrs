@@ -94,6 +94,26 @@ mod tests {
                 c: None,
             }
         );
+        assert_eq!(
+            daa(0x10, true, true, false),
+            AluResult {
+                val: Some(0xa),
+                z: Some(false),
+                n: None,
+                h: Some(false),
+                c: None,
+            }
+        );
+        assert_eq!(
+            daa(0x40, true, false, true),
+            AluResult {
+                val: Some(0xe0),
+                z: Some(false),
+                n: None,
+                h: Some(false),
+                c: None,
+            }
+        );
     }
 }
 
@@ -150,6 +170,44 @@ pub fn sub(dst: u8, src: u8, carry: bool) -> AluResult {
         n: Some(true),
         h: Some((dst & 0xf) < (src & 0xf) + c),
         c: Some(src as u16 + c as u16 > dst as u16),
+    }
+}
+
+pub fn daa(a: u8, n_flag: bool, h_flag: bool, c_flag: bool) -> AluResult {
+    let final_c_flag;
+    let mut res = a;
+    match n_flag {
+        true => {
+            let mut adj = 0;
+            final_c_flag = None;
+            if h_flag {
+                adj += 6;
+            }
+            if c_flag {
+                adj += 0x60;
+            }
+            res = res.wrapping_sub(adj);
+        }
+        false => {
+            let mut adj = 0;
+            if h_flag || (a & 0xf) > 0x9 {
+                adj += 6;
+            }
+            if c_flag || a > 0x99 {
+                adj += 0x60;
+                final_c_flag = Some(true);
+            } else {
+                final_c_flag = None;
+            }
+            res = res.wrapping_add(adj);
+        }
+    };
+    AluResult {
+        val: Some(res as u16),
+        h: Some(false),
+        c: final_c_flag,
+        z: Some(res == 0),
+        n: None,
     }
 }
 
