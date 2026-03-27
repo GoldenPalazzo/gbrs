@@ -52,6 +52,14 @@ impl Timer {
     }
 
     pub fn step(&mut self, mcycles: u8) -> bool {
+        let mut req_int = false;
+        for _ in 0..mcycles {
+            req_int |= self.step_mcycle();
+        }
+        req_int
+    }
+
+    pub fn step_mcycle(&mut self) -> bool {
         let mut request_interrupt = false;
         if self.need_to_update_tima && !self.write_to_tima {
             self.tima = self.tma;
@@ -60,21 +68,15 @@ impl Timer {
         self.need_to_update_tima = false;
         self.write_to_tima = false;
 
-        let tcycles = mcycles * 4;
         let old_edge = self.get_timer_edge();
-        self.internal_timer = self.internal_timer.wrapping_add(tcycles as u16);
+        self.internal_timer = self.internal_timer.wrapping_add(4);
         let edge = self.get_timer_edge();
         let timer_tick = old_edge && !edge;
         if timer_tick {
             let tima_falling_edge;
             (self.tima, tima_falling_edge) = self.tima.overflowing_add(1);
             if tima_falling_edge {
-                if mcycles == 1 {
-                    self.need_to_update_tima = true;
-                } else {
-                    self.tima = self.tma;
-                    request_interrupt = true;
-                }
+                self.need_to_update_tima = true;
             }
         }
         request_interrupt
