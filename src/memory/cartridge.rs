@@ -69,7 +69,7 @@ impl Cartridge {
         let mapper: Box<dyn Mapper> = match hw_type {
             0x00 => Box::new(RomOnly { data }),
             0x01 => Box::new(Mbc1 { data }),
-            _ => todo!(),
+            _ => todo!("Mapper {} not implemented", hw_type),
         };
         Ok(Self { title, mapper })
     }
