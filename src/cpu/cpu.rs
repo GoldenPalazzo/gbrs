@@ -97,7 +97,7 @@ impl Cpu {
                 _ => self.execute_instruction(mem_bus, &instr),
             }
         } else {
-            error!(
+            panic!(
                 "Invalid opcode 0x{:02X} at 0x{:04X}",
                 opcode,
                 self.regs.get_pc().wrapping_sub(1)
