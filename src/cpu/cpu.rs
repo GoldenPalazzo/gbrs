@@ -487,7 +487,7 @@ impl Cpu {
                 self.apply_alu(
                     bus,
                     Some(&Operand::Reg8(*reg)),
-                    &rrotate(val, false, Some(self.regs.get_flag(FLAG_C))),
+                    &rrotate(val, true, Some(self.regs.get_flag(FLAG_C))),
                 );
                 1
             }
