@@ -186,9 +186,18 @@ impl Cpu {
                 (Operand::Reg16(Reg16::HL), true) => 1,
                 _ => 4,
             },
-            // Instruction::LD(dst, src) | Instruction::LDH(dst, src) =>
-            //     self.load(bus, dst, src),
             Instruction::LD(dst, src) => {
+                if let (Operand::AddrDirect16, Operand::Reg16(Reg16::SP)) = (dst, src) {
+                    /*
+                     * Edge case in which LD effectively loads a word instead
+                     * of a byte in memory. Without it, it would only write
+                     * the lower byte.
+                     */
+                    let addr = self.read_word(bus);
+                    let sp = self.regs.get_sp();
+                    bus.write16(addr, sp);
+                    return 5;
+                }
                 self.load(bus, dst, src);
                 match (dst, src) {
                     (Operand::Reg8(Reg8::A), Operand::AddrIndirect(_)) => 2,

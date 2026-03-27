@@ -318,6 +318,10 @@ impl Instruction {
                 Operand::AddrIndirectLow8(Reg8::C),
             )),
             0xf0 => Some(Self::LDH(Operand::Reg8(Reg8::A), Operand::AddrDirectLow8)),
+            0xf9 => Some(Self::LD(
+                Operand::Reg16(Reg16::SP),
+                Operand::Reg16(Reg16::HL),
+            )),
             0xfa => Some(Self::LD(Operand::Reg8(Reg8::A), Operand::AddrDirect16)),
 
             0xcb => Some(Self::Prefix),
