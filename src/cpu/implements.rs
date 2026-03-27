@@ -285,3 +285,14 @@ pub fn sra(a: u8) -> AluResult {
     res.z = Some((res.val.unwrap() as u8) == 0);
     res
 }
+
+pub fn swap(a: u8) -> AluResult {
+    let res = a.rotate_left(4);
+    AluResult {
+        val: Some(res as u16),
+        z: Some(res == 0),
+        n: Some(false),
+        h: Some(false),
+        c: Some(false),
+    }
+}

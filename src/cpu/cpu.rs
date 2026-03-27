@@ -470,6 +470,12 @@ impl Cpu {
                     3
                 }
             }
+            Instruction::RST(vec) => {
+                let push_pc = self.regs.get_pc();
+                self.regs.set_pc(*vec as u16);
+                self.push(bus, push_pc);
+                4
+            }
             Instruction::RET(cond) => {
                 let res = self.ret(bus, cond);
                 if cond.is_none() {
@@ -477,7 +483,11 @@ impl Cpu {
                 }
                 if res { return 5 } else { return 2 }
             }
-
+            Instruction::RETI => {
+                self.ime_pending = true;
+                self.ret(bus, &None);
+                4
+            }
             Instruction::POP(r) => {
                 let val = self.pop(bus);
                 self.regs.set_reg16(r, val);
@@ -508,6 +518,15 @@ impl Cpu {
                     &rrotate(val, true, Some(self.regs.get_flag(FLAG_C))),
                 );
                 1
+            }
+
+            Instruction::SWAP(Operand::Reg8(reg)) => {
+                let res = swap(self.get_operand_value(bus, &Operand::Reg8(*reg)) as u8);
+                self.apply_alu(bus, Some(&Operand::Reg8(*reg)), &res);
+                match reg {
+                    Reg8::HLderef => 4,
+                    _ => 2,
+                }
             }
 
             Instruction::SRL(Operand::Reg8(reg)) => {

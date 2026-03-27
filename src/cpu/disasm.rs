@@ -140,7 +140,7 @@ pub enum Instruction {
     RETI,
     JP(Option<Condition>, Operand),
     CALL(Option<Condition>, Operand),
-    RST,
+    RST(u8),
 
     POP(Reg16),
     PUSH(Reg16),
@@ -298,7 +298,7 @@ impl Instruction {
 
             0xcd => Some(Self::CALL(None, Operand::Imm16)),
 
-            0xc7..=0xff if (opcode & 0xc7) == 0xc7 => todo!("RST not implemented"),
+            0xc7..=0xff if (opcode & 0xc7) == 0xc7 => Some(Self::RST(opcode & 0x38)),
 
             0xc1..=0xf1 if (opcode & 0xcf) == 0xc1 => {
                 Some(Self::POP(Reg16::extract(opcode, Reg16Kind::Stk)))
