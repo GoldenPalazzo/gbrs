@@ -15,6 +15,16 @@ mod tests {
             }
         );
         assert_eq!(
+            sub(0, 0, false),
+            AluResult {
+                val: Some(0),
+                c: Some(false),
+                h: Some(false),
+                n: Some(true),
+                z: Some(true),
+            }
+        );
+        assert_eq!(
             add_acc(255, 255, true),
             AluResult {
                 val: Some(255),

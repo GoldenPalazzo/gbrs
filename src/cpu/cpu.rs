@@ -305,7 +305,11 @@ impl Cpu {
                 (Operand::Reg8(Reg8::A), _) => {
                     let dst_val = self.get_operand_value(bus, dst);
                     let src_val = self.get_operand_value(bus, src);
-                    self.apply_alu(bus, Some(dst), &sub(dst_val as u8, src_val as u8, true));
+                    self.apply_alu(
+                        bus,
+                        Some(dst),
+                        &sub(dst_val as u8, src_val as u8, self.regs.get_flag(FLAG_C)),
+                    );
                     match src {
                         Operand::Reg8(Reg8::HLderef) | Operand::Imm8 => 2,
                         Operand::Reg8(_) => 1,
