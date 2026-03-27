@@ -63,13 +63,16 @@ impl MemoryBus {
             0x8000..=0x9fff => self.vram[(addr as usize) - 0x8000] = data,
             0xc000..=0xcfff => self.wram[(addr as usize) - 0xc000] = data,
             0xd000..=0xdfff => self.switchable_wram[(addr as usize) - 0xd000] = data,
+            0xff01 | 0xff02 => self.serial.write(addr, data),
             0xff04..=0xff07 => self.timer.write(addr, data),
             0xff10..=0xff26 => {} //audio
             0xff0f | 0xffff => self.interrupts.write(addr, data),
             0xe000..=0xfdff => panic!("Tried to write in echo ram 0x{:02X}!", addr),
+            0xff40..=0xff4b => println!("Stub: write in 0x{:02X}", addr),
             0xff80..=0xfffe => self.hram[(addr as usize) - 0xff80] = data,
             _ => todo!(
-                "Write to address 0x{:04X} hasn't been implemented yet",
+                "Write (data=0x{:02x}) to address 0x{:04X} hasn't been implemented yet",
+                data,
                 addr
             ),
         }
@@ -82,7 +85,7 @@ impl MemoryBus {
     }
 
     pub fn step(&mut self, mcycles: u8) {
-        // self.serial.step(mcycles);
+        self.serial.step(mcycles);
         if self.timer.step(mcycles) {
             self.interrupts.request(Interrupt::Timer);
         }
