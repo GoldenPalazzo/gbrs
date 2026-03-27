@@ -14,6 +14,6 @@ A personal project for emulating a GameBoy, written in Rust.
 6. [x] LD R, R
 7. [x] JR, JP, CALL, RET, RST
 8. [x] Miscellaneous instructions
-9. [ ] OP R, R
+9. [x] OP R, R
 10. [ ] Bit op
 11. [ ] OP A, (HL)

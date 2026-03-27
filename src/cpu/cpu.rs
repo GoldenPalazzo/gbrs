@@ -510,6 +510,46 @@ impl Cpu {
                 1
             }
 
+            Instruction::SLA(Operand::Reg8(reg)) => {
+                let res = sla(self.get_operand_value(bus, &Operand::Reg8(*reg)) as u8);
+                self.apply_alu(bus, Some(&Operand::Reg8(*reg)), &res);
+                match reg {
+                    Reg8::HLderef => 4,
+                    _ => 2,
+                }
+            }
+
+            Instruction::SRA(Operand::Reg8(reg)) => {
+                let res = sra(self.get_operand_value(bus, &Operand::Reg8(*reg)) as u8);
+                self.apply_alu(bus, Some(&Operand::Reg8(*reg)), &res);
+                match reg {
+                    Reg8::HLderef => 4,
+                    _ => 2,
+                }
+            }
+
+            Instruction::RLC(Operand::Reg8(reg)) => {
+                let val = self.regs.get_reg8(reg);
+                self.apply_alu(bus, Some(&Operand::Reg8(*reg)), &lrotate(val, true, None));
+                1
+            }
+
+            Instruction::RRC(Operand::Reg8(reg)) => {
+                let val = self.regs.get_reg8(reg);
+                self.apply_alu(bus, Some(&Operand::Reg8(*reg)), &rrotate(val, true, None));
+                1
+            }
+
+            Instruction::RL(Operand::Reg8(reg)) => {
+                let val = self.regs.get_reg8(reg);
+                self.apply_alu(
+                    bus,
+                    Some(&Operand::Reg8(*reg)),
+                    &lrotate(val, true, Some(self.regs.get_flag(FLAG_C))),
+                );
+                1
+            }
+
             Instruction::RR(Operand::Reg8(reg)) => {
                 let val = self.regs.get_reg8(reg);
                 self.apply_alu(
