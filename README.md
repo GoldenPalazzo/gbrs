@@ -6,7 +6,7 @@ A personal project for emulating a GameBoy, written in Rust.
 
 ### CPU instructions
 
-1. [ ] Special instructions
+1. [x] Special instructions
 2. [ ] Interrupts
 3. [x] OP SP, HL
 4. [x] OP R, IMM
@@ -15,5 +15,5 @@ A personal project for emulating a GameBoy, written in Rust.
 7. [x] JR, JP, CALL, RET, RST
 8. [x] Miscellaneous instructions
 9. [x] OP R, R
-10. [ ] Bit op
-11. [ ] OP A, (HL)
+10. [x] Bit op
+11. [x] OP A, (HL)
