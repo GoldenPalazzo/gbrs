@@ -248,3 +248,20 @@ pub fn compare(a: u8, op: u8) -> AluResult {
     let res = sub(a, op, false);
     AluResult { val: None, ..res }
 }
+
+pub fn sla(a: u8) -> AluResult {
+    lrotate(a, true, Some(false)) // carry = bit uscente (7), bit 0 = 0
+}
+
+pub fn srl(a: u8) -> AluResult {
+    rrotate(a, true, Some(false)) // carry = bit 0, bit 7 = 0
+}
+
+pub fn sra(a: u8) -> AluResult {
+    let mut res = rrotate(a, true, Some(false));
+    // preserva il bit 7 originale
+    let msb = a & 0x80;
+    res.val = Some((res.val.unwrap() as u8 | msb) as u16);
+    res.z = Some((res.val.unwrap() as u8) == 0);
+    res
+}

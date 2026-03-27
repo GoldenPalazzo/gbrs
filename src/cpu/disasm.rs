@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Reg8 {
     A,
     B,
@@ -26,7 +26,7 @@ impl Reg8 {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Reg16 {
     BC,
     DE,
@@ -37,7 +37,7 @@ pub enum Reg16 {
     HLminus,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Reg16Kind {
     Normal,
     Stk,
@@ -63,7 +63,7 @@ impl Reg16 {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Condition {
     NonZero,
     Zero,
@@ -83,7 +83,7 @@ impl Condition {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Operand {
     Imm8,
     Reg8(Reg8),

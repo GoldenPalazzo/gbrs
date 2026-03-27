@@ -481,6 +481,26 @@ impl Cpu {
                 self.ime_pending = true;
                 1
             }
+
+            Instruction::RR(Operand::Reg8(reg)) => {
+                let val = self.regs.get_reg8(reg);
+                self.apply_alu(
+                    bus,
+                    Some(&Operand::Reg8(*reg)),
+                    &rrotate(val, false, Some(self.regs.get_flag(FLAG_C))),
+                );
+                1
+            }
+
+            Instruction::SRL(Operand::Reg8(reg)) => {
+                let res = srl(self.get_operand_value(bus, &Operand::Reg8(*reg)) as u8);
+                self.apply_alu(bus, Some(&Operand::Reg8(*reg)), &res);
+                match reg {
+                    Reg8::HLderef => 4,
+                    _ => 2,
+                }
+            }
+
             Instruction::Hardlock => panic!("Hardlocked!"),
             _ => todo!(
                 "{:?} (0x{:02X}) not implemented",
