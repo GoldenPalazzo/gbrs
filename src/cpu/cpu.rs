@@ -120,11 +120,9 @@ impl Cpu {
         if !self.check_cond(cond) {
             return false;
         }
-        let lo = bus.read(self.regs.get_sp()) as u16;
-        let hi = bus.read(self.regs.get_sp().wrapping_add(1)) as u16;
-        let addr = (hi << 8) | lo;
+        let addr = self.pop(bus);
         self.regs.set_pc(addr);
-        self.pop(bus);
+        // self.pop(bus);
         true
     }
     fn jump(
