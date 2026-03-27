@@ -15,6 +15,16 @@ mod tests {
             }
         );
         assert_eq!(
+            add_acc(255, 255, true),
+            AluResult {
+                val: Some(255),
+                z: Some(false),
+                n: Some(false),
+                h: Some(true),
+                c: Some(true),
+            }
+        );
+        assert_eq!(
             add_hl(0xffab, 0x0123),
             AluResult {
                 val: Some(206),
@@ -94,7 +104,7 @@ pub fn add_acc(a: u8, b: u8, carry: bool) -> AluResult {
         z: Some(res == 0),
         n: Some(false),
         h: Some((a & 0xf) + (b & 0xf) + c > 0xf),
-        c: Some(res < a || res < b),
+        c: Some((a as u16 + b as u16 + c as u16) > 0xff),
     }
 }
 
