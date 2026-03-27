@@ -13,6 +13,7 @@ pub struct Cpu {
     ime: bool,
     ime_pending: bool,
     halted: bool,
+    halt_bug: bool
 }
 
 impl Cpu {
@@ -82,6 +83,15 @@ impl Cpu {
         if self.ime_pending {
             self.ime_pending = false;
             self.ime = true;
+        }
+
+        if self.halted { 
+            let pending = mem_bus.interrupts.pending() != 0;
+            if pending {
+                println!("Woken up from halt");
+                self.halted = false;
+            }
+            return 1;
         }
         if self.handle_interrupts(mem_bus) {
             return 5;
@@ -460,7 +470,15 @@ impl Cpu {
                 1
             }
             Instruction::STOP => todo!("Should implement low pow mode"),
-            Instruction::HALT => todo!("Should implement low pow mode and interrupts"),
+            Instruction::HALT => {
+                let pending = bus.interrupts.pending() != 0;
+                if !self.ime && pending {
+                    self.halt_bug = true;
+                } else {
+                    self.halted = true;
+                }
+                1
+            },
 
             Instruction::LDH(dst, src) => {
                 self.load(bus, dst, src);
@@ -732,7 +750,11 @@ impl Cpu {
 
     fn read_byte(&mut self, bus: &MemoryBus) -> u8 {
         let val = bus.read(self.regs.get_pc());
-        self.regs.set_pc(self.regs.get_pc().wrapping_add(1));
+        if self.halt_bug {
+            self.halt_bug = false;
+        } else {
+            self.regs.set_pc(self.regs.get_pc().wrapping_add(1));
+        }
         val
     }
 
