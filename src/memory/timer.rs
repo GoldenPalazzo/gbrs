@@ -9,8 +9,8 @@ pub struct Timer {
     tma: u8,
     tima: u8,
 
-    need_to_update_tima: bool,
-    write_to_tima: bool,
+    overflow_pending: bool,
+    tima_written_this_mcycle: bool,
 }
 
 impl Default for Timer {
@@ -20,8 +20,8 @@ impl Default for Timer {
             tac: 0,
             tma: 0,
             tima: 0,
-            need_to_update_tima: false,
-            write_to_tima: false,
+            overflow_pending: false,
+            tima_written_this_mcycle: false,
         }
     }
 }
@@ -40,13 +40,25 @@ impl Timer {
     // NOTE: manca il glitch del falling edge quando si scrive su TAC.
     pub fn write(&mut self, addr: u16, data: u8) {
         match addr {
-            DIV_ADDR => self.internal_timer = 0,
+            DIV_ADDR => {
+                let old_edge = self.get_timer_edge();
+                self.internal_timer = 0;
+                if old_edge {
+                    self.apply_timer_tick();
+                }
+            }
             TIMA_ADDR => {
-                self.write_to_tima = true;
+                self.tima_written_this_mcycle = true;
                 self.tima = data;
             }
             TMA_ADDR => self.tma = data,
-            TAC_ADDR => self.tac = data,
+            TAC_ADDR => {
+                let old_edge = self.get_timer_edge();
+                self.tac = data;
+                if old_edge && !self.get_timer_edge() {
+                    self.apply_timer_tick();
+                }
+            }
             _ => unreachable!(),
         }
     }
@@ -61,23 +73,24 @@ impl Timer {
 
     pub fn step_mcycle(&mut self) -> bool {
         let mut request_interrupt = false;
-        if self.need_to_update_tima && !self.write_to_tima {
-            self.tima = self.tma;
-            request_interrupt = true;
+
+        if self.overflow_pending {
+            if !self.tima_written_this_mcycle {
+                self.tima = self.tma;
+                request_interrupt = true;
+            }
+            self.overflow_pending = false;
         }
-        self.need_to_update_tima = false;
-        self.write_to_tima = false;
+
+        self.tima_written_this_mcycle = false;
 
         let old_edge = self.get_timer_edge();
         self.internal_timer = self.internal_timer.wrapping_add(4);
         let edge = self.get_timer_edge();
+
         let timer_tick = old_edge && !edge;
         if timer_tick {
-            let tima_falling_edge;
-            (self.tima, tima_falling_edge) = self.tima.overflowing_add(1);
-            if tima_falling_edge {
-                self.need_to_update_tima = true;
-            }
+            self.apply_timer_tick();
         }
         request_interrupt
     }
@@ -95,6 +108,14 @@ impl Timer {
                 3 => (self.internal_timer & 0x0080) > 0,
                 _ => unreachable!(),
             }
+    }
+    
+    fn apply_timer_tick(&mut self) {
+        let (new_tima, overflow) = self.tima.overflowing_add(1);
+        self.tima = new_tima;
+        if overflow {
+            self.overflow_pending = true;
+        }
     }
 }
 
