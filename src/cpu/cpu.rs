@@ -622,7 +622,7 @@ impl Cpu {
                 let res = bit(*n, self.get_operand_value(bus, &Operand::Reg8(*reg)) as u8);
                 self.apply_alu(bus, None, &res);
                 match reg {
-                    Reg8::HLderef => 4,
+                    Reg8::HLderef => 3,
                     _ => 2,
                 }
             }
