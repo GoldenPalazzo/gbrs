@@ -4,6 +4,17 @@ A personal project for emulating a GameBoy, written in Rust.
 
 ## Passed test roms
 
+This is the list of the passed test suites by this emulator. Currently I'm
+only testing with Blargg's Gameboy hardware test roms.
+
+- [x] [CPU instructions](#cpu-instructions)
+- [x] Instruction timing
+- [ ] DMG sounds
+- [ ] [Memory timing 1](#memory-timing-1)
+- [ ] Memory timing 2
+- [ ] OAM bug
+- [ ] Halt bug
+
 ### CPU instructions
 
 1. [x] Special instructions
@@ -17,3 +28,10 @@ A personal project for emulating a GameBoy, written in Rust.
 9. [x] OP R, R
 10. [x] Bit op
 11. [x] OP A, (HL)
+
+### Memory timing 1
+
+1. [ ] Read timing
+2. [ ] Write timing
+3. [ ] Modify timing
+
