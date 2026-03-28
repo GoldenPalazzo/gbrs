@@ -2,6 +2,7 @@ use crate::memory::cartridge::Cartridge;
 use crate::memory::interrupts::{Interrupt, InterruptController};
 use crate::memory::io::Serial;
 use crate::memory::timer::Timer;
+use crate::ppu::ppu::Ppu;
 
 // [derive(Default)]
 pub struct MemoryBus {
@@ -14,6 +15,7 @@ pub struct MemoryBus {
     pub serial: Serial,
     pub interrupts: InterruptController,
     timer: Timer,
+    pub ppu: Ppu,
 }
 
 impl Default for MemoryBus {
@@ -27,6 +29,7 @@ impl Default for MemoryBus {
             serial: Serial::default(),
             timer: Timer::default(),
             interrupts: InterruptController::default(),
+            ppu: Ppu::default(),
         }
     }
 }
@@ -91,6 +94,7 @@ impl MemoryBus {
 
     pub fn step(&mut self, mcycles: u8) {
         self.serial.step(mcycles);
+        self.ppu.step(mcycles);
         if self.timer.step(mcycles) {
             self.interrupts.request(Interrupt::Timer);
         }

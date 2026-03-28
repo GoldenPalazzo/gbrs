@@ -1,5 +1,5 @@
 mod cartridge;
-mod interrupts;
+pub mod interrupts;
 mod io;
 pub mod memory;
 mod timer;

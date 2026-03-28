@@ -6,4 +6,5 @@ edition = "2024"
 [dependencies]
 env_logger = "0.11.9"
 log = "0.4.29"
+minifb = "0.28.0"
 paste = "1.0.15"
