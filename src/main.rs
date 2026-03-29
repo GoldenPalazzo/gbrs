@@ -7,7 +7,7 @@ use crate::memory::memory::MemoryBus;
 use std::env;
 use std::io::{self, Write};
 
-use minifb::{Window, WindowOptions};
+use minifb::{Window, WindowOptions, Scale};
 
 fn wait_for_enter() {
     let mut input = String::new();
@@ -33,7 +33,15 @@ fn main() -> std::io::Result<()> {
         panic!("No program provided!");
     }
 
-    let mut window = Window::new("golden boy", 160, 144, WindowOptions::default()).unwrap();
+    let mut window = Window::new(
+        "golden boy",
+        160,
+        144,
+        WindowOptions {
+            scale: Scale::X8,
+            ..WindowOptions::default()
+        }
+    ).unwrap();
     window.update();
 
     let mut cpu = Cpu::new();
@@ -42,7 +50,7 @@ fn main() -> std::io::Result<()> {
     let mut bp = false;
     // let bps = vec![0x20f];
     let bps = [];
-
+    const PALETTE: [u32; 4] = [0xFFFFFF, 0xAAAAAA, 0x555555, 0x000000];
     loop {
         
         if bps.contains(&cpu.regs.get_pc()) {
@@ -56,9 +64,10 @@ fn main() -> std::io::Result<()> {
         if mem.ppu.frame_ready {
             mem.ppu.frame_ready = false;
             let rgb: Vec<u32> = mem.ppu.framebuffer.iter()
-                .map(|&p| if p > 0 {0xffffff} else {0})
+                .map(|&p| PALETTE[p as usize])
                 .collect();
             window.update_with_buffer(&rgb, 160, 144).unwrap();
+            // println!("Presenting frame!");
         }
     }
 }

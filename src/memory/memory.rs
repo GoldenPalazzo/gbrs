@@ -7,7 +7,6 @@ use crate::ppu::ppu::Ppu;
 // [derive(Default)]
 pub struct MemoryBus {
     pub cart: Cartridge,
-    vram: [u8; 0x2000],
     wram: [u8; 0x1000],
     switchable_wram: [u8; 0x1000],
     hram: [u8; 127],
@@ -22,7 +21,6 @@ impl Default for MemoryBus {
     fn default() -> Self {
         Self {
             cart: Cartridge::default(),
-            vram: [0u8; 0x2000],
             wram: [0u8; 0x1000],
             switchable_wram: [0u8; 0x1000],
             hram: [0u8; 127],
@@ -49,16 +47,18 @@ impl MemoryBus {
     pub fn read(&self, addr: u16) -> u8 {
         match addr {
             0x0000..=0x7fff => self.cart.mapper.read(addr),
-            0x8000..=0x9fff => self.vram[(addr as usize) - 0x8000],
+            0x8000..=0x9fff => self.ppu.read(addr),
             0xc000..=0xcfff => self.wram[(addr as usize) - 0xc000],
             0xd000..=0xdfff => self.switchable_wram[(addr as usize) - 0xd000],
+            0xfe00..=0xfe9f => self.ppu.read(addr),
             0xff00 => {println!("Stub: read in 0x{:02X} (gamepad)", addr); 0xff},
             0xff04..=0xff07 => self.timer.read(addr),
             0xff10..=0xff26 => {println!("Stub: read in 0x{:02X}", addr); 0},
+            0xff40..=0xff4b => self.ppu.read(addr),
             0xff0f | 0xffff => self.interrupts.read(addr),
             0xff80..=0xfffe => self.hram[(addr as usize) - 0xff80],
 
-            0xff44 => 0x90, // stubbed to pass cpu_instrs
+            // 0xff44 => 0x90, // stubbed to pass cpu_instrs
 
             _ => 0xff,
         }
@@ -67,7 +67,7 @@ impl MemoryBus {
     pub fn write8(&mut self, addr: u16, data: u8) {
         match addr {
             0x0000..=0x7fff => self.cart.mapper.write(addr, data),
-            0x8000..=0x9fff => self.vram[(addr as usize) - 0x8000] = data,
+            0x8000..=0x9fff => self.ppu.write(addr, data),
             0xc000..=0xcfff => self.wram[(addr as usize) - 0xc000] = data,
             0xd000..=0xdfff => self.switchable_wram[(addr as usize) - 0xd000] = data,
             0xff00 => {println!("Stub: write in 0x{:02X} (gamepad)", addr)},
@@ -76,7 +76,8 @@ impl MemoryBus {
             0xff10..=0xff26 => {} //audio
             0xff0f | 0xffff => self.interrupts.write(addr, data),
             0xe000..=0xfdff => panic!("Tried to write in echo ram 0x{:02X}!", addr),
-            0xff40..=0xff4b => println!("Stub: write in 0x{:02X}", addr),
+            0xfe00..=0xfe9f => self.ppu.write(addr, data),
+            0xff40..=0xff4b => self.ppu.write(addr, data),
             0xff80..=0xfffe => self.hram[(addr as usize) - 0xff80] = data,
             _ => todo!(
                 "Write (data=0x{:02x}) to address 0x{:04X} hasn't been implemented yet",
