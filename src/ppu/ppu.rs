@@ -1,7 +1,5 @@
 use crate::memory::interrupts::Interrupt;
 
-use std::ops::Div;
-
 #[derive(Default, Debug, Clone, Copy)]
 #[repr(u8)]
 pub enum PpuState {
@@ -73,6 +71,7 @@ pub struct Ppu {
     state: PpuState,
 
     dots: u16,
+    window_line_cnt: u8,
 }
 
 impl Default for Ppu {
@@ -93,6 +92,7 @@ impl Default for Ppu {
             oam: [0u8; 0xa0],
             state: PpuState::default(),
             dots: 0,
+            window_line_cnt: 0,
         }
     }
 }
@@ -133,30 +133,49 @@ impl Ppu {
         }
     }
 
-    pub fn step(&mut self, mcycles: u8) -> Option<Interrupt> {
-        let mut int = None;
+    pub fn step(&mut self, mcycles: u8) -> u8 {
+        let mut int: u8 = 0;
         self.dots += mcycles as u16 * 4;
         match self.state {
             PpuState::HorizontalBlank => {
                 if self.dots >= 204 {
                     self.dots -= 204;
                     self.ly += 1;
-                    if self.ly == self.lyc {
-                        int = Some(Interrupt::LcdStat);
+                    if self.ly == self.lyc  {
+                        self.stat |= LYC_LC_FLAG;
+                        if self.stat & LYC_INT_SEL_FLAG != 0 {
+                            int |= Interrupt::LcdStat as u8;
+                        }
+                    } else {
+                        self.stat &= !LYC_LC_FLAG;
                     }
                     if self.ly == 144 {
                         self.state = PpuState::VerticalBlank;
                         self.frame_ready = true;
+                        int |= Interrupt::VBlank as u8;
+                        if self.stat & MODE1_INT_SEL_FLAG != 0 {
+                            int |= Interrupt::LcdStat as u8;
+                        }
                     } else {
                         self.state = PpuState::OAMScan;
+                        if self.stat & MODE2_INT_SEL_FLAG != 0 {
+                            int |= Interrupt::LcdStat as u8;
+                        }
                     }
                 }
             },
             PpuState::VerticalBlank => {
-                if self.dots >= 4560 {
-                    self.dots -= 4560;
-                    self.ly = 0;
-                    self.state = PpuState::OAMScan;
+                if self.dots >= 456 {
+                    self.dots -= 456;
+                    self.ly += 1;
+                    if self.ly > 153 {
+                        self.ly = 0;
+                        self.window_line_cnt = 0;
+                        self.state = PpuState::OAMScan;
+                        if self.stat & MODE1_INT_SEL_FLAG != 0 {
+                            int |= Interrupt::LcdStat as u8;
+                        }
+                    }
                 }
             },
             PpuState::OAMScan => {
@@ -169,11 +188,14 @@ impl Ppu {
                 if self.dots >= 172 {
                     self.dots -= 172;
                     self.state = PpuState::HorizontalBlank;
+                    if self.stat & MODE0_INT_SEL_FLAG != 0 {
+                        int |= Interrupt::LcdStat as u8;
+                    }
                     self.render_scanline();
                 }
             },
         };
-
+        self.stat = (self.stat & !PPU_MODE) | (self.state as u8 & PPU_MODE);
         int
     }
 
@@ -182,40 +204,77 @@ impl Ppu {
     }
 
     fn render_scanline(&mut self) {
-        let tile_map_base = match self.lcdc & BG_TILE_MAP_AREA_FLAG != 0 {
-            true => 0x9c00 - VRAM_ADDR_START,
-            false => 0x9800 - VRAM_ADDR_START,
-        } as usize;
+        if self.lcdc & POWER_FLAG == 0 {return;}
+        let mut drew_win = 0;
         let tile_data_base = match self.lcdc & BG_WIN_TILE_DATA_AREA_FLAG != 0 {
             true => 0x8000 - VRAM_ADDR_START,
-            false => 0x8800 - VRAM_ADDR_START,
+            false => 0x9000 - VRAM_ADDR_START,
         } as usize;
         for x in 0..160usize {
-            let scrolled_x = (x + self.scx as usize) & 0xff;
-            let scrolled_y = (self.ly as usize + self.scy as usize) & 0xff;
-            let cur_tile_x = scrolled_x / 8;
-            let cur_tile_x_pixel = scrolled_x % 8;
-            let cur_tile_y = scrolled_y as usize / 8;
-            let cur_tile_y_pixel = scrolled_y as usize % 8;
+            if self.lcdc & WIN_ENABLE_FLAG != 0 && self.lcdc & BG_WIN_ENABLE_PRIO_FLAG != 0 &&
+                    self.wx < 167 && self.wy < 144 && self.ly >= self.wy &&
+                    x + 7 >= self.wx as usize {
+                let win_map_base = match self.lcdc & WIN_TILE_MAP_AREA_FLAG != 0 {
+                    true => 0x9c00 - VRAM_ADDR_START,
+                    false => 0x9800 - VRAM_ADDR_START,
+                } as usize;
+                let scrolled_x = (x + 7 - self.wx as usize) & 0xff;
+                let scrolled_y = self.window_line_cnt as usize;
+                let cur_tile_x = scrolled_x / 8;
+                let cur_tile_x_pixel = scrolled_x % 8;
+                let cur_tile_y = scrolled_y as usize / 8;
+                let cur_tile_y_pixel = scrolled_y as usize % 8;
 
-            let tile_index = self.vram[tile_map_base + cur_tile_y * 32 + cur_tile_x] as usize;
-            let tile_data_ptr = if self.lcdc & BG_WIN_TILE_DATA_AREA_FLAG != 0 {
-                tile_data_base + tile_index * 16
+                let tile_index = self.vram[win_map_base + cur_tile_y * 32 + cur_tile_x] as usize;
+                let tile_data_ptr = if self.lcdc & BG_WIN_TILE_DATA_AREA_FLAG != 0 {
+                    tile_data_base + tile_index * 16
+                } else {
+                    let signed_index = tile_index as i8 as i32;
+                    (tile_data_base as i32 + signed_index * 16) as usize
+                };
+                let row = [
+                    self.vram[tile_data_ptr + cur_tile_y_pixel * 2],
+                    self.vram[tile_data_ptr + cur_tile_y_pixel * 2 + 1]
+                ];
+                let lo = (row[0] >> (7 - cur_tile_x_pixel)) & 1;
+                let hi = (row[1] >> (7 - cur_tile_x_pixel)) & 1;
+                let color = (hi << 1) | lo;
+
+                assert!((0..4).contains(&color));
+                self.framebuffer[self.ly as usize * 160 + x] = (self.bgp >> (2 * color)) & 0b11;
+                drew_win = 1;
             } else {
-                // tile_index è signed: 0x00 → tile 256 (0x9000), 0x80 → tile 0 (0x8800)
-                let signed_index = tile_index as i8 as i32;
-                (tile_data_base as i32 + signed_index * 16) as usize
-            };
-            let row = [
-                self.vram[tile_data_ptr + cur_tile_y_pixel * 2],
-                self.vram[tile_data_ptr + cur_tile_y_pixel * 2 + 1]
-            ];
-            let lo = (row[0] >> (7 - cur_tile_x_pixel)) & 1;
-            let hi = (row[1] >> (7 - cur_tile_x_pixel)) & 1;
-            let color = (hi << 1) | lo;
+                let bg_map_base = match self.lcdc & BG_TILE_MAP_AREA_FLAG != 0 {
+                    true => 0x9c00 - VRAM_ADDR_START,
+                    false => 0x9800 - VRAM_ADDR_START,
+                } as usize;
+                let scrolled_x = (x + self.scx as usize) & 0xff;
+                let scrolled_y = (self.ly as usize + self.scy as usize) & 0xff;
+                let cur_tile_x = scrolled_x / 8;
+                let cur_tile_x_pixel = scrolled_x % 8;
+                let cur_tile_y = scrolled_y as usize / 8;
+                let cur_tile_y_pixel = scrolled_y as usize % 8;
 
-            assert!((0..4).contains(&color));
-            self.framebuffer[self.ly as usize * 160 + x] = (self.bgp >> (2 * color)) & 0b11;
+                let tile_index = self.vram[bg_map_base + cur_tile_y * 32 + cur_tile_x] as usize;
+                let tile_data_ptr = if self.lcdc & BG_WIN_TILE_DATA_AREA_FLAG != 0 {
+                    tile_data_base + tile_index * 16
+                } else {
+                    let signed_index = tile_index as i8 as i32;
+                    (tile_data_base as i32 + signed_index * 16) as usize
+                };
+                let row = [
+                    self.vram[tile_data_ptr + cur_tile_y_pixel * 2],
+                    self.vram[tile_data_ptr + cur_tile_y_pixel * 2 + 1]
+                ];
+                let lo = (row[0] >> (7 - cur_tile_x_pixel)) & 1;
+                let hi = (row[1] >> (7 - cur_tile_x_pixel)) & 1;
+                let color = (hi << 1) | lo;
+
+                assert!((0..4).contains(&color));
+                self.framebuffer[self.ly as usize * 160 + x] = (self.bgp >> (2 * color)) & 0b11;
+
+            }
         }
+        self.window_line_cnt += drew_win;
     }
 }

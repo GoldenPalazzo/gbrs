@@ -88,7 +88,7 @@ impl Cpu {
         if self.halted { 
             let pending = mem_bus.interrupts.pending() != 0;
             if pending {
-                println!("Woken up from halt");
+                // println!("Woken up from halt");
                 self.halted = false;
             }
             return 1;

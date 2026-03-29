@@ -77,6 +77,7 @@ impl MemoryBus {
             0xff0f | 0xffff => self.interrupts.write(addr, data),
             0xe000..=0xfdff => panic!("Tried to write in echo ram 0x{:02X}!", addr),
             0xfe00..=0xfe9f => self.ppu.write(addr, data),
+            0xfea0..=0xfeff => println!("Write in not usable mem 0x{:04X} ignored", addr),
             0xff40..=0xff4b => self.ppu.write(addr, data),
             0xff80..=0xfffe => self.hram[(addr as usize) - 0xff80] = data,
             _ => todo!(
@@ -95,7 +96,13 @@ impl MemoryBus {
 
     pub fn step(&mut self, mcycles: u8) {
         self.serial.step(mcycles);
-        self.ppu.step(mcycles);
+        let ints = self.ppu.step(mcycles);
+        if ints & Interrupt::VBlank as u8 != 0 {
+            self.interrupts.request(Interrupt::VBlank);
+        }
+        if ints & Interrupt::LcdStat as u8 != 0 {
+            self.interrupts.request(Interrupt::LcdStat);
+        }
         if self.timer.step(mcycles) {
             self.interrupts.request(Interrupt::Timer);
         }

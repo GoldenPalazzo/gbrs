@@ -17,7 +17,8 @@ impl Mapper for RomOnly {
     }
     fn write(&mut self, addr: u16, _data: u8) {
         match addr {
-            0x0000..=0x7fff => panic!("Invalid write in ROM 0x{:04X}", addr),
+            // 0x0000..=0x7fff => panic!("Invalid write in ROM 0x{:04X}", addr),
+            0x0000..=0x7fff => println!("Write in ROM 0x{:04X} ignored", addr),
             _ => todo!(),
         }
     }
