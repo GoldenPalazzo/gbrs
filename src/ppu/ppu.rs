@@ -294,7 +294,19 @@ impl Ppu {
             } else {
                 8u8
             };
+
+            let mut sprites_on_line: Vec<usize> = Vec::new();
             for spr in 0..40 {
+                let y_16 = self.oam[spr * 4] as i32;
+                if self.ly as i32 >= y_16 - 16 && (self.ly as i32) < y_16 - 16 + obj_height as i32 {
+                    sprites_on_line.push(spr);
+                    if sprites_on_line.len() == 10 {
+                        break;
+                    }
+                }
+            }
+
+            for &spr in &sprites_on_line {
                 let y_16 = self.oam[spr * 4];
                 if y_16 == 0 || y_16 >= 160 {
                     continue;
@@ -305,11 +317,7 @@ impl Ppu {
                 }
                 let index = self.oam[spr * 4 + 2];
                 let attrs = self.oam[spr * 4 + 3];
-                if self.ly >= y_16 - 16
-                    && self.ly < y_16 - 16 + obj_height
-                    && x >= x_8 as usize - 8
-                    && x < x_8 as usize
-                {
+                if x >= x_8 as usize - 8 && x < x_8 as usize {
                     let mut cur_tile_x_pixel = x - (x_8 as usize - 8);
                     let mut cur_tile_y_pixel = self.ly as usize - (y_16 as usize - 16);
                     if attrs & 0x40 != 0 {
