@@ -38,6 +38,8 @@ const SCX_ADDR: u16 = 0xff43;
 const LY_ADDR: u16 = 0xff44;
 const LYC_ADDR: u16 = 0xff45;
 const BGP_ADDR: u16 = 0xff47;
+const OBP0_ADDR: u16 = 0xff48;
+const OBP1_ADDR: u16 = 0xff49;
 const WY_ADDR: u16 = 0xff4a;
 const WX_ADDR: u16 = 0xff4b;
 const VRAM_ADDR_START: u16  = 0x8000;
@@ -59,6 +61,8 @@ pub struct Ppu {
     stat: u8,
 
     bgp: u8,
+    obp0: u8,
+    obp1: u8,
 
     /*
      * tmap 1: $9800-$9BFF
@@ -88,6 +92,8 @@ impl Default for Ppu {
             wy: 0,
             stat: 0,
             bgp: 0,
+            obp0: 0,
+            obp1: 0,
             vram: [0u8; 0x2000],
             oam: [0u8; 0xa0],
             state: PpuState::default(),
@@ -126,7 +132,9 @@ impl Ppu {
             WY_ADDR => self.wy = data,
             WX_ADDR => self.wx = data,
             BGP_ADDR => self.bgp = data,
-            0xff48 | 0xff49 => {println!("Stub: write to obj palette {} (data=0x{:02X})", addr - 0xff48, data)}
+            OBP0_ADDR => self.obp0 = data,
+            OBP1_ADDR => self.obp1 = data,
+            // 0xff48 | 0xff49 => {println!("Stub: write to obj palette {} (data=0x{:02X})", addr - 0xff48, data)}
             VRAM_ADDR_START..=VRAM_ADDR_END => self.vram[(addr - VRAM_ADDR_START) as usize] = data,
             OAM_ADDR_START..=OAM_ADDR_END => self.oam[(addr - OAM_ADDR_START) as usize] = data,
             _ => unreachable!("Write at 0x{:04X} (data=0x{:02X})", addr, data),
@@ -134,6 +142,7 @@ impl Ppu {
     }
 
     pub fn step(&mut self, mcycles: u8) -> u8 {
+        // assert_eq!(self.lcdc & OBJ_SIZE_FLAG, 0);
         let mut int: u8 = 0;
         self.dots += mcycles as u16 * 4;
         match self.state {
@@ -197,10 +206,6 @@ impl Ppu {
         };
         self.stat = (self.stat & !PPU_MODE) | (self.state as u8 & PPU_MODE);
         int
-    }
-
-    pub fn get_state(&self) -> PpuState {
-        self.state
     }
 
     fn render_scanline(&mut self) {
@@ -273,6 +278,44 @@ impl Ppu {
                 assert!((0..4).contains(&color));
                 self.framebuffer[self.ly as usize * 160 + x] = (self.bgp >> (2 * color)) & 0b11;
 
+            }
+
+            if self.lcdc & OBJ_ENABLE_FLAG == 0 {continue;}
+            let obj_data_base = 0x8000 - VRAM_ADDR_START as usize;
+            let obj_height = if self.lcdc & OBJ_SIZE_FLAG != 0 { 16u8 } else { 8u8 };
+            for spr in 0..40 {
+                let y_16 = self.oam[spr*4];
+                if y_16 == 0 || y_16 >= 160 {continue;}
+                let x_8 = self.oam[spr*4+1];
+                if x_8 == 0 || x_8 >= 168 {continue;}
+                let index = self.oam[spr*4+2];
+                let attrs = self.oam[spr*4+3];
+                if self.ly >= y_16 - 16 && self.ly < y_16 - 16 + obj_height
+                        && x >= x_8 as usize - 8 && x < x_8 as usize {
+
+                    let mut cur_tile_x_pixel = x - (x_8 as usize - 8);
+                    let mut cur_tile_y_pixel = self.ly as usize - (y_16 as usize - 16);
+                    if attrs & 0x40 != 0 { cur_tile_y_pixel = obj_height as usize - 1 - cur_tile_y_pixel; }
+                    if attrs & 0x20 != 0 { cur_tile_x_pixel = 7 - cur_tile_x_pixel; }
+
+                    let tile_index = if obj_height == 16 { index & 0xFE } else { index } as usize;
+                    let tile_data_ptr = obj_data_base + tile_index as usize * 16;
+                    let row = [
+                        self.vram[tile_data_ptr + cur_tile_y_pixel * 2],
+                        self.vram[tile_data_ptr + cur_tile_y_pixel * 2 + 1]
+                    ];
+                    let lo = (row[0] >> (7 - cur_tile_x_pixel)) & 1;
+                    let hi = (row[1] >> (7 - cur_tile_x_pixel)) & 1;
+                    let color = (hi << 1) | lo;
+                    if color == 0 {continue;}
+                    let palette = match attrs & 0x10 != 0 {
+                        true => self.obp1,
+                        false => self.obp0,
+                    };
+
+                    assert!((0..4).contains(&color));
+                    self.framebuffer[self.ly as usize * 160 + x] = (palette >> (2 * color)) & 0b11;
+                }
             }
         }
         self.window_line_cnt += drew_win;
