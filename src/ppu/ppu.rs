@@ -316,6 +316,10 @@ impl Ppu {
                 }
                 let index = self.oam[spr * 4 + 2];
                 let attrs = self.oam[spr * 4 + 3];
+                if attrs & 0x80 != 0 {
+                    let bg_color = self.framebuffer[self.ly as usize * 160 + x];
+                    if bg_color != 0 { continue; }
+                }
                 if x >= x_8 as usize - 8 && x < x_8 as usize {
                     let mut cur_tile_x_pixel = x - (x_8 as usize - 8);
                     let mut cur_tile_y_pixel = self.ly as usize - (y_16 as usize - 16);
