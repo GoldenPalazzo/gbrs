@@ -217,6 +217,25 @@ impl Ppu {
             true => 0x8000 - VRAM_ADDR_START,
             false => 0x9000 - VRAM_ADDR_START,
         } as usize;
+
+        let mut sprites_on_line: Vec<usize> = Vec::new();
+        let obj_data_base = 0x8000 - VRAM_ADDR_START as usize;
+        let obj_height = if self.lcdc & OBJ_SIZE_FLAG != 0 {
+            16u8
+        } else {
+            8u8
+        };
+        if self.lcdc & OBJ_ENABLE_FLAG != 0 {
+            for spr in 0..40 {
+                let y_16 = self.oam[spr * 4] as i32;
+                if self.ly as i32 >= y_16 - 16 && (self.ly as i32) < y_16 - 16 + obj_height as i32 {
+                    sprites_on_line.push(spr);
+                    if sprites_on_line.len() == 10 {
+                        break;
+                    }
+                }
+            }
+        }            
         for x in 0..160usize {
             if self.lcdc & WIN_ENABLE_FLAG != 0
                 && self.lcdc & BG_WIN_ENABLE_PRIO_FLAG != 0
@@ -285,28 +304,8 @@ impl Ppu {
                 self.framebuffer[self.ly as usize * 160 + x] = (self.bgp >> (2 * color)) & 0b11;
             }
 
-            if self.lcdc & OBJ_ENABLE_FLAG == 0 {
-                continue;
-            }
-            let obj_data_base = 0x8000 - VRAM_ADDR_START as usize;
-            let obj_height = if self.lcdc & OBJ_SIZE_FLAG != 0 {
-                16u8
-            } else {
-                8u8
-            };
-
-            let mut sprites_on_line: Vec<usize> = Vec::new();
-            for spr in 0..40 {
-                let y_16 = self.oam[spr * 4] as i32;
-                if self.ly as i32 >= y_16 - 16 && (self.ly as i32) < y_16 - 16 + obj_height as i32 {
-                    sprites_on_line.push(spr);
-                    if sprites_on_line.len() == 10 {
-                        break;
-                    }
-                }
-            }
-
             for &spr in &sprites_on_line {
+
                 let y_16 = self.oam[spr * 4];
                 if y_16 == 0 || y_16 >= 160 {
                     continue;
@@ -350,6 +349,7 @@ impl Ppu {
 
                     assert!((0..4).contains(&color));
                     self.framebuffer[self.ly as usize * 160 + x] = (palette >> (2 * color)) & 0b11;
+                    break;
                 }
             }
         }
