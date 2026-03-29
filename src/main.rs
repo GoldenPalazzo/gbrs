@@ -7,7 +7,7 @@ use crate::memory::memory::MemoryBus;
 use std::env;
 use std::io::{self, Write};
 
-use minifb::{Window, WindowOptions, Scale};
+use minifb::{Scale, Window, WindowOptions};
 
 fn wait_for_enter() {
     let mut input = String::new();
@@ -40,8 +40,9 @@ fn main() -> std::io::Result<()> {
         WindowOptions {
             scale: Scale::X8,
             ..WindowOptions::default()
-        }
-    ).unwrap();
+        },
+    )
+    .unwrap();
     window.update();
 
     let mut cpu = Cpu::new();
@@ -52,7 +53,6 @@ fn main() -> std::io::Result<()> {
     let bps = [];
     const PALETTE: [u32; 4] = [0xFFFFFF, 0xAAAAAA, 0x555555, 0x000000];
     loop {
-        
         if bps.contains(&cpu.regs.get_pc()) {
             bp = true;
         }
@@ -63,7 +63,10 @@ fn main() -> std::io::Result<()> {
         mem.step(cycles);
         if mem.ppu.frame_ready {
             mem.ppu.frame_ready = false;
-            let rgb: Vec<u32> = mem.ppu.framebuffer.iter()
+            let rgb: Vec<u32> = mem
+                .ppu
+                .framebuffer
+                .iter()
                 .map(|&p| PALETTE[p as usize])
                 .collect();
             window.update_with_buffer(&rgb, 160, 144).unwrap();

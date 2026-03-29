@@ -13,7 +13,7 @@ pub struct Cpu {
     ime: bool,
     ime_pending: bool,
     halted: bool,
-    halt_bug: bool
+    halt_bug: bool,
 }
 
 impl Cpu {
@@ -85,7 +85,7 @@ impl Cpu {
             self.ime = true;
         }
 
-        if self.halted { 
+        if self.halted {
             let pending = mem_bus.interrupts.pending() != 0;
             if pending {
                 // println!("Woken up from halt");
@@ -478,7 +478,7 @@ impl Cpu {
                     self.halted = true;
                 }
                 1
-            },
+            }
 
             Instruction::LDH(dst, src) => {
                 self.load(bus, dst, src);

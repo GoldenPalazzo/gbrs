@@ -109,7 +109,7 @@ impl Timer {
                 _ => unreachable!(),
             }
     }
-    
+
     fn apply_timer_tick(&mut self) {
         let (new_tima, overflow) = self.tima.overflowing_add(1);
         self.tima = new_tima;

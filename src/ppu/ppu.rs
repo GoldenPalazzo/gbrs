@@ -7,7 +7,7 @@ pub enum PpuState {
     VerticalBlank,
     #[default]
     OAMScan,
-    DrawingPixels
+    DrawingPixels,
 }
 
 const DPS: i32 = 456; // dots per scanline
@@ -42,10 +42,10 @@ const OBP0_ADDR: u16 = 0xff48;
 const OBP1_ADDR: u16 = 0xff49;
 const WY_ADDR: u16 = 0xff4a;
 const WX_ADDR: u16 = 0xff4b;
-const VRAM_ADDR_START: u16  = 0x8000;
+const VRAM_ADDR_START: u16 = 0x8000;
 const VRAM_ADDR_END: u16 = 0x9fff;
-const OAM_ADDR_START: u16  = 0xfe00;
-const OAM_ADDR_END: u16  = 0xfe9f;
+const OAM_ADDR_START: u16 = 0xfe00;
+const OAM_ADDR_END: u16 = 0xfe9f;
 
 pub struct Ppu {
     pub framebuffer: [u8; 160 * 144],
@@ -150,7 +150,7 @@ impl Ppu {
                 if self.dots >= 204 {
                     self.dots -= 204;
                     self.ly += 1;
-                    if self.ly == self.lyc  {
+                    if self.ly == self.lyc {
                         self.stat |= LYC_LC_FLAG;
                         if self.stat & LYC_INT_SEL_FLAG != 0 {
                             int |= Interrupt::LcdStat as u8;
@@ -172,7 +172,7 @@ impl Ppu {
                         }
                     }
                 }
-            },
+            }
             PpuState::VerticalBlank => {
                 if self.dots >= 456 {
                     self.dots -= 456;
@@ -186,13 +186,13 @@ impl Ppu {
                         }
                     }
                 }
-            },
+            }
             PpuState::OAMScan => {
                 if self.dots >= 80 {
                     self.dots -= 80;
                     self.state = PpuState::DrawingPixels;
                 }
-            },
+            }
             PpuState::DrawingPixels => {
                 if self.dots >= 172 {
                     self.dots -= 172;
@@ -202,23 +202,29 @@ impl Ppu {
                     }
                     self.render_scanline();
                 }
-            },
+            }
         };
         self.stat = (self.stat & !PPU_MODE) | (self.state as u8 & PPU_MODE);
         int
     }
 
     fn render_scanline(&mut self) {
-        if self.lcdc & POWER_FLAG == 0 {return;}
+        if self.lcdc & POWER_FLAG == 0 {
+            return;
+        }
         let mut drew_win = 0;
         let tile_data_base = match self.lcdc & BG_WIN_TILE_DATA_AREA_FLAG != 0 {
             true => 0x8000 - VRAM_ADDR_START,
             false => 0x9000 - VRAM_ADDR_START,
         } as usize;
         for x in 0..160usize {
-            if self.lcdc & WIN_ENABLE_FLAG != 0 && self.lcdc & BG_WIN_ENABLE_PRIO_FLAG != 0 &&
-                    self.wx < 167 && self.wy < 144 && self.ly >= self.wy &&
-                    x + 7 >= self.wx as usize {
+            if self.lcdc & WIN_ENABLE_FLAG != 0
+                && self.lcdc & BG_WIN_ENABLE_PRIO_FLAG != 0
+                && self.wx < 167
+                && self.wy < 144
+                && self.ly >= self.wy
+                && x + 7 >= self.wx as usize
+            {
                 let win_map_base = match self.lcdc & WIN_TILE_MAP_AREA_FLAG != 0 {
                     true => 0x9c00 - VRAM_ADDR_START,
                     false => 0x9800 - VRAM_ADDR_START,
@@ -239,7 +245,7 @@ impl Ppu {
                 };
                 let row = [
                     self.vram[tile_data_ptr + cur_tile_y_pixel * 2],
-                    self.vram[tile_data_ptr + cur_tile_y_pixel * 2 + 1]
+                    self.vram[tile_data_ptr + cur_tile_y_pixel * 2 + 1],
                 ];
                 let lo = (row[0] >> (7 - cur_tile_x_pixel)) & 1;
                 let hi = (row[1] >> (7 - cur_tile_x_pixel)) & 1;
@@ -269,7 +275,7 @@ impl Ppu {
                 };
                 let row = [
                     self.vram[tile_data_ptr + cur_tile_y_pixel * 2],
-                    self.vram[tile_data_ptr + cur_tile_y_pixel * 2 + 1]
+                    self.vram[tile_data_ptr + cur_tile_y_pixel * 2 + 1],
                 ];
                 let lo = (row[0] >> (7 - cur_tile_x_pixel)) & 1;
                 let hi = (row[1] >> (7 - cur_tile_x_pixel)) & 1;
@@ -277,37 +283,58 @@ impl Ppu {
 
                 assert!((0..4).contains(&color));
                 self.framebuffer[self.ly as usize * 160 + x] = (self.bgp >> (2 * color)) & 0b11;
-
             }
 
-            if self.lcdc & OBJ_ENABLE_FLAG == 0 {continue;}
+            if self.lcdc & OBJ_ENABLE_FLAG == 0 {
+                continue;
+            }
             let obj_data_base = 0x8000 - VRAM_ADDR_START as usize;
-            let obj_height = if self.lcdc & OBJ_SIZE_FLAG != 0 { 16u8 } else { 8u8 };
+            let obj_height = if self.lcdc & OBJ_SIZE_FLAG != 0 {
+                16u8
+            } else {
+                8u8
+            };
             for spr in 0..40 {
-                let y_16 = self.oam[spr*4];
-                if y_16 == 0 || y_16 >= 160 {continue;}
-                let x_8 = self.oam[spr*4+1];
-                if x_8 == 0 || x_8 >= 168 {continue;}
-                let index = self.oam[spr*4+2];
-                let attrs = self.oam[spr*4+3];
-                if self.ly >= y_16 - 16 && self.ly < y_16 - 16 + obj_height
-                        && x >= x_8 as usize - 8 && x < x_8 as usize {
-
+                let y_16 = self.oam[spr * 4];
+                if y_16 == 0 || y_16 >= 160 {
+                    continue;
+                }
+                let x_8 = self.oam[spr * 4 + 1];
+                if x_8 == 0 || x_8 >= 168 {
+                    continue;
+                }
+                let index = self.oam[spr * 4 + 2];
+                let attrs = self.oam[spr * 4 + 3];
+                if self.ly >= y_16 - 16
+                    && self.ly < y_16 - 16 + obj_height
+                    && x >= x_8 as usize - 8
+                    && x < x_8 as usize
+                {
                     let mut cur_tile_x_pixel = x - (x_8 as usize - 8);
                     let mut cur_tile_y_pixel = self.ly as usize - (y_16 as usize - 16);
-                    if attrs & 0x40 != 0 { cur_tile_y_pixel = obj_height as usize - 1 - cur_tile_y_pixel; }
-                    if attrs & 0x20 != 0 { cur_tile_x_pixel = 7 - cur_tile_x_pixel; }
+                    if attrs & 0x40 != 0 {
+                        cur_tile_y_pixel = obj_height as usize - 1 - cur_tile_y_pixel;
+                    }
+                    if attrs & 0x20 != 0 {
+                        cur_tile_x_pixel = 7 - cur_tile_x_pixel;
+                    }
 
-                    let tile_index = if obj_height == 16 { index & 0xFE } else { index } as usize;
+                    let tile_index = if obj_height == 16 {
+                        index & 0xFE
+                    } else {
+                        index
+                    } as usize;
                     let tile_data_ptr = obj_data_base + tile_index as usize * 16;
                     let row = [
                         self.vram[tile_data_ptr + cur_tile_y_pixel * 2],
-                        self.vram[tile_data_ptr + cur_tile_y_pixel * 2 + 1]
+                        self.vram[tile_data_ptr + cur_tile_y_pixel * 2 + 1],
                     ];
                     let lo = (row[0] >> (7 - cur_tile_x_pixel)) & 1;
                     let hi = (row[1] >> (7 - cur_tile_x_pixel)) & 1;
                     let color = (hi << 1) | lo;
-                    if color == 0 {continue;}
+                    if color == 0 {
+                        continue;
+                    }
                     let palette = match attrs & 0x10 != 0 {
                         true => self.obp1,
                         false => self.obp0,
