@@ -11,13 +11,13 @@ pub struct RomOnly {
 impl Mapper for RomOnly {
     fn read(&self, addr: u16) -> u8 {
         match addr {
-            0x0000..=0x3fff => self.data[addr as usize],
+            0x0000..=0x7fff => self.data[addr as usize],
             _ => panic!("Invalid read at 0x{:04X}", addr),
         }
     }
     fn write(&mut self, addr: u16, _data: u8) {
         match addr {
-            0x0000..=0x3fff => panic!("Invalid write in ROM 0x{:04X}", addr),
+            0x0000..=0x7fff => panic!("Invalid write in ROM 0x{:04X}", addr),
             _ => todo!(),
         }
     }
@@ -26,6 +26,7 @@ impl Mapper for RomOnly {
 #[derive(Default)]
 pub struct Mbc1 {
     data: Vec<u8>,
+    rom_banks: Vec<u8>,
 }
 
 impl Mapper for Mbc1 {
@@ -68,9 +69,10 @@ impl Cartridge {
         let title = String::from_utf8_lossy(&data[0x134..0x144]).to_string();
         let mapper: Box<dyn Mapper> = match hw_type {
             0x00 => Box::new(RomOnly { data }),
-            0x01 => Box::new(Mbc1 { data }),
+            // 0x01 => Box::new(Mbc1 { data }),
             _ => todo!("Mapper {} not implemented", hw_type),
         };
+        println!("Mapper {} rom", hw_type);
         Ok(Self { title, mapper })
     }
 }
