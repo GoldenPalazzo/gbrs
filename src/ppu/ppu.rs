@@ -235,10 +235,9 @@ impl Ppu {
                     }
                 }
             }
-        }            
+        }
         for x in 0..160usize {
             if self.lcdc & WIN_ENABLE_FLAG != 0
-                && self.lcdc & BG_WIN_ENABLE_PRIO_FLAG != 0
                 && self.wx < 167
                 && self.wy < 144
                 && self.ly >= self.wy
@@ -271,7 +270,12 @@ impl Ppu {
                 let color = (hi << 1) | lo;
 
                 assert!((0..4).contains(&color));
-                self.framebuffer[self.ly as usize * 160 + x] = (self.bgp >> (2 * color)) & 0b11;
+                self.framebuffer[self.ly as usize * 160 + x] =
+                    if self.lcdc & BG_WIN_ENABLE_PRIO_FLAG != 0 {
+                        (self.bgp >> (2 * color)) & 0b11
+                    } else {
+                        0
+                    };
                 drew_win = 1;
             } else {
                 let bg_map_base = match self.lcdc & BG_TILE_MAP_AREA_FLAG != 0 {
@@ -301,11 +305,15 @@ impl Ppu {
                 let color = (hi << 1) | lo;
 
                 assert!((0..4).contains(&color));
-                self.framebuffer[self.ly as usize * 160 + x] = (self.bgp >> (2 * color)) & 0b11;
+                self.framebuffer[self.ly as usize * 160 + x] =
+                    if self.lcdc & BG_WIN_ENABLE_PRIO_FLAG != 0 {
+                        (self.bgp >> (2 * color)) & 0b11
+                    } else {
+                        0
+                    };
             }
 
             for &spr in &sprites_on_line {
-
                 let y_16 = self.oam[spr * 4];
                 if y_16 == 0 || y_16 >= 160 {
                     continue;
