@@ -6,6 +6,7 @@ use crate::memory::memory::MemoryBus;
 
 use std::env;
 use std::io::{self, Write};
+use std::time::{Duration, Instant};
 
 use minifb::{Key, Scale, Window, WindowOptions};
 
@@ -52,6 +53,8 @@ fn main() -> std::io::Result<()> {
     // let bps = vec![0x20f];
     let bps = [];
     const PALETTE: [u32; 4] = [0xFFFFFF, 0xAAAAAA, 0x555555, 0x000000];
+    const FRAME_DURATION: Duration = Duration::from_nanos(16_742_706);
+    let mut frame_start = Instant::now();
     loop {
         if bps.contains(&cpu.regs.get_pc()) {
             bp = true;
@@ -87,6 +90,11 @@ fn main() -> std::io::Result<()> {
             ) {
                 mem.interrupts.request(int);
             }
+            let elapsed = frame_start.elapsed();
+            if elapsed < FRAME_DURATION {
+                std::thread::sleep(FRAME_DURATION - elapsed);
+            }
+            frame_start = Instant::now();
         }
     }
 }
