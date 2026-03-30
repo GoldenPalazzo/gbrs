@@ -1,8 +1,10 @@
 use crate::memory::cartridge::Cartridge;
 use crate::memory::interrupts::{Interrupt, InterruptController};
+use crate::memory::joypad::Joypad;
 use crate::memory::serial::Serial;
 use crate::memory::timer::Timer;
 use crate::ppu::ppu::Ppu;
+use log::debug;
 
 // [derive(Default)]
 pub struct MemoryBus {
@@ -15,6 +17,7 @@ pub struct MemoryBus {
     pub interrupts: InterruptController,
     timer: Timer,
     pub ppu: Ppu,
+    pub joypad: Joypad,
 }
 
 impl Default for MemoryBus {
@@ -28,6 +31,7 @@ impl Default for MemoryBus {
             timer: Timer::default(),
             interrupts: InterruptController::default(),
             ppu: Ppu::default(),
+            joypad: Joypad::default(),
         }
     }
 }
@@ -51,10 +55,7 @@ impl MemoryBus {
             0xc000..=0xcfff => self.wram[(addr as usize) - 0xc000],
             0xd000..=0xdfff => self.switchable_wram[(addr as usize) - 0xd000],
             0xfe00..=0xfe9f => self.ppu.read(addr),
-            0xff00 => {
-                println!("Stub: read in 0x{:02X} (gamepad)", addr);
-                0xff
-            }
+            0xff00 => self.joypad.read(addr),
             0xff04..=0xff07 => self.timer.read(addr),
             0xff10..=0xff26 => {
                 println!("Stub: read in 0x{:02X}", addr);
@@ -80,9 +81,7 @@ impl MemoryBus {
             0x8000..=0x9fff => self.ppu.write(addr, data),
             0xc000..=0xcfff => self.wram[(addr as usize) - 0xc000] = data,
             0xd000..=0xdfff => self.switchable_wram[(addr as usize) - 0xd000] = data,
-            0xff00 => {
-                println!("Stub: write in 0x{:02X} (gamepad)", addr)
-            }
+            0xff00 => self.joypad.write(addr, data),
             0xff01 | 0xff02 => self.serial.write(addr, data),
             0xff04..=0xff07 => self.timer.write(addr, data),
             0xff10..=0xff26 => {} //audio

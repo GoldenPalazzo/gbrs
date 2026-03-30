@@ -79,7 +79,7 @@ impl Cpu {
     }
 
     pub fn step(&mut self, mem_bus: &mut MemoryBus) -> u8 {
-        self.print_state_doctor(mem_bus);
+        // self.print_state_doctor(mem_bus);
         if self.ime_pending {
             self.ime_pending = false;
             self.ime = true;

@@ -7,7 +7,7 @@ use crate::memory::memory::MemoryBus;
 use std::env;
 use std::io::{self, Write};
 
-use minifb::{Scale, Window, WindowOptions};
+use minifb::{Key, Scale, Window, WindowOptions};
 
 fn wait_for_enter() {
     let mut input = String::new();
@@ -71,6 +71,22 @@ fn main() -> std::io::Result<()> {
                 .collect();
             window.update_with_buffer(&rgb, 160, 144).unwrap();
             // println!("Presenting frame!");
+            if let Some(int) = mem.joypad.set_buttons(
+                window.is_key_down(Key::X),
+                window.is_key_down(Key::Z),
+                window.is_key_down(Key::Space),
+                window.is_key_down(Key::Enter),
+            ) {
+                mem.interrupts.request(int);
+            }
+            if let Some(int) = mem.joypad.set_dpad(
+                window.is_key_down(Key::Right),
+                window.is_key_down(Key::Left),
+                window.is_key_down(Key::Up),
+                window.is_key_down(Key::Down),
+            ) {
+                mem.interrupts.request(int);
+            }
         }
     }
 }
