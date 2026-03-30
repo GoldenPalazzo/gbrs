@@ -11,10 +11,18 @@ pub enum Interrupt {
 const IE_ADDR: u16 = 0xffff;
 const IF_ADDR: u16 = 0xff0f;
 
-#[derive(Default)]
 pub struct InterruptController {
     pub ie: u8,
     pub if_: u8,
+}
+
+impl Default for InterruptController {
+    fn default() -> Self {
+        Self {
+            ie: 0x00,
+            if_: 0xe1,
+        }
+    }
 }
 
 impl InterruptController {
