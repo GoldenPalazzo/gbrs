@@ -7,6 +7,16 @@
 
   outputs = { self, nixpkgs }: let
     pkgs = nixpkgs.legacyPackages."x86_64-linux";
+    runtimeLibs = with pkgs; [
+      wayland
+      libxkbcommon
+      libx11
+      libxcursor
+      libxrandr
+      libxi
+      libGL
+      vulkan-loader
+    ];
   in {
     devShells."x86_64-linux".default = pkgs.mkShell {
       buildInputs = with pkgs; [
@@ -14,6 +24,10 @@
           # deps
           pkg-config
       ];
+      shellHook = ''
+        export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath runtimeLibs}:$LD_LIBRARY_PATH
+        # export WINIT_UNIX_BACKEND=wayland 
+      '';
       env.RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
     };
   };
