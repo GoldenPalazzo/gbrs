@@ -252,8 +252,8 @@ impl Ppu {
                 let scrolled_y = self.window_line_cnt as usize;
                 let cur_tile_x = scrolled_x / 8;
                 let cur_tile_x_pixel = scrolled_x % 8;
-                let cur_tile_y = scrolled_y as usize / 8;
-                let cur_tile_y_pixel = scrolled_y as usize % 8;
+                let cur_tile_y = scrolled_y / 8;
+                let cur_tile_y_pixel = scrolled_y % 8;
 
                 let tile_index = self.vram[win_map_base + cur_tile_y * 32 + cur_tile_x] as usize;
                 let tile_data_ptr = if self.lcdc & BG_WIN_TILE_DATA_AREA_FLAG != 0 {
@@ -282,8 +282,8 @@ impl Ppu {
                 let scrolled_y = (self.ly as usize + self.scy as usize) & 0xff;
                 let cur_tile_x = scrolled_x / 8;
                 let cur_tile_x_pixel = scrolled_x % 8;
-                let cur_tile_y = scrolled_y as usize / 8;
-                let cur_tile_y_pixel = scrolled_y as usize % 8;
+                let cur_tile_y = scrolled_y / 8;
+                let cur_tile_y_pixel = scrolled_y % 8;
 
                 let tile_index = self.vram[bg_map_base + cur_tile_y * 32 + cur_tile_x] as usize;
                 let tile_data_ptr = if self.lcdc & BG_WIN_TILE_DATA_AREA_FLAG != 0 {
@@ -318,7 +318,9 @@ impl Ppu {
                 let attrs = self.oam[spr * 4 + 3];
                 if attrs & 0x80 != 0 {
                     let bg_color = self.framebuffer[self.ly as usize * 160 + x];
-                    if bg_color != 0 { continue; }
+                    if bg_color != 0 {
+                        continue;
+                    }
                 }
                 if x >= x_8 as usize - 8 && x < x_8 as usize {
                     let mut cur_tile_x_pixel = x - (x_8 as usize - 8);
@@ -335,7 +337,7 @@ impl Ppu {
                     } else {
                         index
                     } as usize;
-                    let tile_data_ptr = obj_data_base + tile_index as usize * 16;
+                    let tile_data_ptr = obj_data_base + tile_index * 16;
                     let row = [
                         self.vram[tile_data_ptr + cur_tile_y_pixel * 2],
                         self.vram[tile_data_ptr + cur_tile_y_pixel * 2 + 1],
