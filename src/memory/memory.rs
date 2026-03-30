@@ -64,8 +64,13 @@ impl MemoryBus {
             0xff0f | 0xffff => self.interrupts.read(addr),
             0xff80..=0xfffe => self.hram[(addr as usize) - 0xff80],
 
-            // 0xff44 => 0x90, // stubbed to pass cpu_instrs
-            _ => 0xff,
+            _ => {
+                println!(
+                    "Read to address 0x{:04X} hasn't been implemented yet. Returning 0xff...",
+                    addr
+                );
+                0xff
+            }
         }
     }
 
@@ -87,10 +92,9 @@ impl MemoryBus {
             0xfea0..=0xfeff => println!("Write in not usable mem 0x{:04X} ignored", addr),
             0xff40..=0xff4b => self.ppu.write(addr, data),
             0xff80..=0xfffe => self.hram[(addr as usize) - 0xff80] = data,
-            _ => todo!(
-                "Write (data=0x{:02x}) to address 0x{:04X} hasn't been implemented yet",
-                data,
-                addr
+            _ => println!(
+                "Write (data=0x{:02x}) to address 0x{:04X} hasn't been implemented yet. Ignoring...",
+                data, addr
             ),
         }
     }
