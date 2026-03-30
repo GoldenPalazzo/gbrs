@@ -88,6 +88,14 @@ impl MemoryBus {
             0xff10..=0xff26 => {} //audio
             0xff0f | 0xffff => self.interrupts.write(addr, data),
             0xe000..=0xfdff => panic!("Tried to write in echo ram 0x{:02X}!", addr),
+            0xff46 => {
+                // OAM DMA transfer
+                let dma_base = (data as u16) << 8;
+                for dma_off in 0..0xa0 {
+                    let dma_data = self.read(dma_base + dma_off);
+                    self.ppu.write(0xfe00 + dma_off, dma_data);
+                }
+            }
             0xfe00..=0xfe9f => self.ppu.write(addr, data),
             0xfea0..=0xfeff => println!("Write in not usable mem 0x{:04X} ignored", addr),
             0xff40..=0xff4b => self.ppu.write(addr, data),
