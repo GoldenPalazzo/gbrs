@@ -9,8 +9,8 @@ use log::debug;
 // [derive(Default)]
 pub struct MemoryBus {
     pub cart: Cartridge,
-    wram: [u8; 0x1000],
-    switchable_wram: [u8; 0x1000],
+    wram: [u8; 0x2000],
+    // switchable_wram: [u8; 0x1000],
     hram: [u8; 127],
 
     pub serial: Serial,
@@ -24,8 +24,8 @@ impl Default for MemoryBus {
     fn default() -> Self {
         Self {
             cart: Cartridge::default(),
-            wram: [0u8; 0x1000],
-            switchable_wram: [0u8; 0x1000],
+            wram: [0u8; 0x2000],
+            // switchable_wram: [0u8; 0x1000],
             hram: [0u8; 127],
             serial: Serial::default(),
             timer: Timer::default(),
@@ -52,8 +52,9 @@ impl MemoryBus {
         match addr {
             0x0000..=0x7fff => self.cart.mapper.read(addr),
             0x8000..=0x9fff => self.ppu.read(addr),
-            0xc000..=0xcfff => self.wram[(addr as usize) - 0xc000],
-            0xd000..=0xdfff => self.switchable_wram[(addr as usize) - 0xd000],
+            0xa000..=0xbfff => self.cart.mapper.read(addr),
+            0xc000..=0xdfff => self.wram[(addr as usize) - 0xc000],
+            // 0xd000..=0xdfff => self.switchable_wram[(addr as usize) - 0xd000],
             0xfe00..=0xfe9f => self.ppu.read(addr),
             0xff00 => self.joypad.read(addr),
             0xff04..=0xff07 => self.timer.read(addr),
@@ -79,8 +80,9 @@ impl MemoryBus {
         match addr {
             0x0000..=0x7fff => self.cart.mapper.write(addr, data),
             0x8000..=0x9fff => self.ppu.write(addr, data),
-            0xc000..=0xcfff => self.wram[(addr as usize) - 0xc000] = data,
-            0xd000..=0xdfff => self.switchable_wram[(addr as usize) - 0xd000] = data,
+            0xa000..=0xbfff => self.cart.mapper.write(addr, data),
+            0xc000..=0xdfff => self.wram[(addr as usize) - 0xc000] = data,
+            // 0xd000..=0xdfff => self.switchable_wram[(addr as usize) - 0xd000] = data,
             0xff00 => self.joypad.write(addr, data),
             0xff01 | 0xff02 => self.serial.write(addr, data),
             0xff04..=0xff07 => self.timer.write(addr, data),
