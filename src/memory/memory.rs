@@ -1,6 +1,6 @@
 use crate::memory::cartridge::Cartridge;
 use crate::memory::interrupts::{Interrupt, InterruptController};
-use crate::memory::io::Serial;
+use crate::memory::serial::Serial;
 use crate::memory::timer::Timer;
 use crate::ppu::ppu::Ppu;
 
