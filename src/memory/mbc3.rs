@@ -69,7 +69,7 @@ impl Mapper for Mbc3 {
     fn write(&mut self, addr: u16, data: u8) {
         match addr {
             0x0000..=0x1fff => self.ram_timer_enable = data == 0xa,
-            0x2000..=0x3fff => self.rom_bank = data & 0x1f,
+            0x2000..=0x3fff => self.rom_bank = data & 0x7f,
             0x4000..=0x5fff => self.ram_rtc_select = data,
             0x6000..=0x7fff => {
                 if !self.has_timer {return;}
