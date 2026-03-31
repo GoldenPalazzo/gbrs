@@ -2,7 +2,7 @@ use crate::memory::cartridge::Mapper;
 
 pub struct Mbc1 {
     rom: Vec<u8>,
-    ram: [u8; 0x6000],
+    ram: [u8; 0x8000],
 
     ram_enable: bool,
     rom_bank: u8,
@@ -27,7 +27,7 @@ impl Default for Mbc1 {
     fn default() -> Self {
         Self {
             rom: Vec::new(),
-            ram: [0u8; 0x6000],
+            ram: [0u8; 0x8000],
             ram_enable: false,
             rom_bank: 1,
             ram_bank_rom_upper: 0,
@@ -44,7 +44,12 @@ impl Mapper for Mbc1 {
     }
     fn read(&self, addr: u16) -> u8 {
         match addr {
-            0x0000..=0x3fff => self.rom[addr as usize],
+            0x0000..=0x3fff => {
+                let used_bank = if self.is_advanced_banking_mode {
+                    (self.ram_bank_rom_upper as usize) << 5
+                } else { 0 };
+                self.rom[addr as usize + used_bank * 0x4000]
+            }
             0x4000..=0x7fff => {
                 let used_bank =
                     self.rom_bank.max(1) as usize | (self.ram_bank_rom_upper as usize) << 5;
