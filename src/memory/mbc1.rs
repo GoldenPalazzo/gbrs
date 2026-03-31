@@ -79,9 +79,9 @@ impl Mapper for Mbc1 {
             0xa000..=0xbfff => {
                 if self.has_ram && self.ram_enable {
                     let used_bank = if self.is_advanced_banking_mode {
-                        0
-                    } else {
                         self.ram_bank_rom_upper as usize
+                    } else {
+                        0
                     };
                     self.ram[addr as usize - 0xa000 + used_bank * 0x2000] = data;
                 }
