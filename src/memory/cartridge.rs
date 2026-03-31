@@ -1,4 +1,4 @@
-use crate::memory::{romonly::RomOnly, mbc1::Mbc1};
+use crate::memory::{romonly::RomOnly, mbc1::Mbc1, mbc3::Mbc3};
 
 pub trait Mapper {
     fn set_rom(&mut self, rom: Vec<u8>);
@@ -30,6 +30,11 @@ impl Cartridge {
             0x01 => Box::new(Mbc1::new(false, false)),
             0x02 => Box::new(Mbc1::new(true, false)),
             0x03 => Box::new(Mbc1::new(true, true)),
+            0x0f => Box::new(Mbc3::new(false, true, true)),
+            0x10 => Box::new(Mbc3::new(true, true, true)),
+            0x11 => Box::new(Mbc3::new(false, false, false)),
+            0x12 => Box::new(Mbc3::new(true, false, false)),
+            0x13 => Box::new(Mbc3::new(true, false, true)),
             _ => todo!("Mapper {} not implemented", hw_type),
         };
         mapper.set_rom(data);

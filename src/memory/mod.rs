@@ -7,3 +7,4 @@ mod timer;
 
 mod romonly;
 mod mbc1;
+mod mbc3;
