@@ -53,16 +53,16 @@ impl Mapper for Mbc1 {
             0xa000..=0xbfff => {
                 if self.has_ram && self.ram_enable {
                     let used_bank = if self.is_advanced_banking_mode {
-                        0
-                    } else {
                         self.ram_bank_rom_upper as usize
+                    } else {
+                        0
                     };
                     self.ram[addr as usize - 0xa000 + used_bank * 0x2000]
                 } else {
                     0xff
                 }
             }
-            _ => panic!("Invalid read at 0x{:04X}", addr),
+            _ => 0xff
         }
     }
     fn write(&mut self, addr: u16, data: u8) {
@@ -81,9 +81,7 @@ impl Mapper for Mbc1 {
                     self.ram[addr as usize - 0xa000 + used_bank * 0x2000] = data;
                 }
             }
-
-            // 0x0000..=0x7fff => panic!("Invalid write in ROM 0x{:04X}", addr),
-            _ => todo!("Write 0x{:04X}", addr),
+            _ => {},
         }
     }
 }
