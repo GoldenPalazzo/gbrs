@@ -115,6 +115,8 @@ impl Ppu {
             WY_ADDR => self.wy,
             WX_ADDR => self.wx,
             BGP_ADDR => self.bgp,
+            OBP0_ADDR => self.obp0,
+            OBP1_ADDR => self.obp1,
             VRAM_ADDR_START..=VRAM_ADDR_END => self.vram[(addr - VRAM_ADDR_START) as usize],
             OAM_ADDR_START..=OAM_ADDR_END => self.oam[(addr - OAM_ADDR_START) as usize],
             _ => unreachable!("Read at 0x{:04X}", addr),
