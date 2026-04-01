@@ -16,6 +16,7 @@
       libxi
       libGL
       vulkan-loader
+      alsa-lib
     ];
   in {
     devShells."x86_64-linux".default = pkgs.mkShell {
@@ -23,6 +24,7 @@
           cargo rustc rustfmt clippy rust-analyzer
           # deps
           pkg-config
+          alsa-lib
       ];
       shellHook = ''
         export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath runtimeLibs}:$LD_LIBRARY_PATH
