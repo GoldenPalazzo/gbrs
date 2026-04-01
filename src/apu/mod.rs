@@ -170,7 +170,7 @@ impl Apu {
     }
 
     pub fn set_sample_rate(&mut self, sample_rate_khz: f32) {
-        self.sample_rate_mcycles = (4194304.0 / sample_rate_khz) as u8;
+        self.sample_rate_mcycles = (1048576.0 / sample_rate_khz) as u8;
     }
 
     fn mix(&self) -> (f32, f32) {
@@ -196,3 +196,4 @@ impl Apu {
         (left, right)
     }
 }
+
