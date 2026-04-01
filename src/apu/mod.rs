@@ -9,7 +9,6 @@ struct SquareChannel {
     enabled: bool,
 
     length_timer: u8,
-    duty_cycle: u8,
     volume: u8,
     raising_envelope: bool,
     envelope_pace: u8,
@@ -44,6 +43,7 @@ impl SquareChannel {
     fn step(&mut self, mcycles: u8) {
         self.period_timer -= mcycles as i16;
         if self.period_timer <= 0 {
+            self.period = self.nr3 as u16 | ((self.nr4 as u16 & 0x7) << 8);
             self.period_timer += 2048 - self.period as i16;
             self.duty_pos = (self.duty_pos + 1) % 8;
         }
