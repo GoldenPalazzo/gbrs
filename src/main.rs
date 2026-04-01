@@ -84,8 +84,6 @@ fn main_loop(
     bps: &Option<Vec<u16>>,
 ) {
     const PALETTE: [u32; 4] = [0xFFFFFF, 0xAAAAAA, 0x555555, 0x000000];
-    const FRAME_DURATION: Duration = Duration::from_nanos(16_742_706);
-    let mut frame_start = Instant::now();
     let mut bp = false;
     loop {
         if let Some(a) = bps
@@ -96,6 +94,11 @@ fn main_loop(
         if bp {
             wait_for_enter();
         }
+
+        if audio.buffer.lock().unwrap().len() > 4096 {
+            std::thread::sleep(Duration::from_millis(1));
+        }
+
         let cycles = cpu.step(&mut mem);
         mem.step(cycles);
         audio.buffer.lock().unwrap().extend(mem.apu.drain_samples());
@@ -124,11 +127,6 @@ fn main_loop(
             ) {
                 mem.interrupts.request(int);
             }
-            let elapsed = frame_start.elapsed();
-            if elapsed < FRAME_DURATION {
-                std::thread::sleep(FRAME_DURATION - elapsed);
-            }
-            frame_start = Instant::now();
         }
     }
 }
