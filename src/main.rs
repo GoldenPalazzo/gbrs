@@ -1,3 +1,4 @@
+mod apu;
 mod cpu;
 mod memory;
 mod ppu;
@@ -10,13 +11,78 @@ use std::time::{Duration, Instant};
 
 use minifb::{Key, Scale, Window, WindowOptions};
 
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use std::sync::{Arc, Mutex};
+
+pub type SampleBuffer = Arc<Mutex<Vec<f32>>>;
+
+pub struct AudioOutput {
+    _stream: cpal::Stream, // mantieni vivo lo stream
+    pub buffer: SampleBuffer,
+
+    sample_rate: f32,
+}
+
+impl AudioOutput {
+    pub fn new() -> Self {
+        let host = cpal::default_host();
+        let device = host.default_output_device().unwrap();
+        let config = device.default_output_config().unwrap();
+        let sample_rate = config.sample_rate() as f32;
+
+        let buffer: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(Vec::new()));
+        let buffer_clone = buffer.clone();
+
+        let stream = device
+            .build_output_stream(
+                &config.into(),
+                move |data: &mut [f32], _| {
+                    let mut buf = buffer_clone.lock().unwrap();
+                    for sample in data.iter_mut() {
+                        *sample = if !buf.is_empty() {
+                            buf.remove(0)
+                        } else {
+                            0.0 // silenzio se il buffer è vuoto
+                        };
+                    }
+                },
+                |err| eprintln!("Audio error: {err}"),
+                None,
+            )
+            .unwrap();
+
+        stream.play().unwrap();
+        Self {
+            _stream: stream,
+            buffer,
+            sample_rate,
+        }
+    }
+
+    pub fn get_sample_rate(&self) -> f32 {
+        self.sample_rate
+    }
+}
+
+impl Default for AudioOutput {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 fn wait_for_enter() {
     let mut input = String::new();
     io::stdout().flush().unwrap();
     io::stdin().read_line(&mut input).unwrap();
 }
 
-fn main_loop(mut cpu: Cpu, mut mem: MemoryBus, mut win: Window, bps: &Option<Vec<u16>>) {
+fn main_loop(
+    mut cpu: Cpu,
+    mut mem: MemoryBus,
+    mut win: Window,
+    audio: AudioOutput,
+    bps: &Option<Vec<u16>>,
+) {
     const PALETTE: [u32; 4] = [0xFFFFFF, 0xAAAAAA, 0x555555, 0x000000];
     const FRAME_DURATION: Duration = Duration::from_nanos(16_742_706);
     let mut frame_start = Instant::now();
@@ -32,6 +98,7 @@ fn main_loop(mut cpu: Cpu, mut mem: MemoryBus, mut win: Window, bps: &Option<Vec
         }
         let cycles = cpu.step(&mut mem);
         mem.step(cycles);
+        audio.buffer.lock().unwrap().extend(mem.apu.drain_samples());
         if mem.ppu.frame_ready {
             mem.ppu.frame_ready = false;
             let rgb: Vec<u32> = mem
@@ -41,7 +108,6 @@ fn main_loop(mut cpu: Cpu, mut mem: MemoryBus, mut win: Window, bps: &Option<Vec
                 .map(|&p| PALETTE[p as usize])
                 .collect();
             win.update_with_buffer(&rgb, 160, 144).unwrap();
-            // println!("Presenting frame!");
             if let Some(int) = mem.joypad.set_buttons(
                 win.is_key_down(Key::X),
                 win.is_key_down(Key::Z),
@@ -94,11 +160,16 @@ fn main() -> std::io::Result<()> {
     .unwrap();
     window.update();
 
-    let mut cpu = Cpu::new();
+    let cpu = Cpu::new();
     let mut mem = MemoryBus::from_file(&args[1]).unwrap();
+    let audio = AudioOutput::new();
+    mem.apu.set_sample_rate(audio.get_sample_rate());
+
+    // let samples = mem.apu.drain_samples();
+    // audio_buffer.lock().unwrap().extend(samples);
     println!("Loaded cart {:?}", mem.cart.title);
     // let bps = vec![0x20f];
     // let bps = [];
-    main_loop(cpu, mem, window, &None);
+    main_loop(cpu, mem, window, audio, &None);
     Ok(())
 }
