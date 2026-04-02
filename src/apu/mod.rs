@@ -1,7 +1,4 @@
 #[derive(Default)]
-struct Sweep {}
-
-#[derive(Default)]
 struct SquareChannel {
     nr0: u8,
     nr1: u8,
@@ -11,15 +8,26 @@ struct SquareChannel {
 
     enabled: bool,
 
-    length_timer: u8,
     volume: u8,
+
+    // length
+    length_timer: u8,
+
+    // envelope
     raising_envelope: bool,
     envelope_pace: u8,
-    period: u16, // 11 bits, overflows at $0x7ff
+    envelope_timer: u8,
 
+    // sweep
+    sweep_pace: u8,
+    raising_sweep: bool,
+    sweep_single_step: u8,
+    sweep_timer: u8,
+
+    // main frequency
+    period: u16, // 11 bits, overflows at $0x7ff
     period_timer: i16,
     duty_pos: u8,
-    envelope_timer: u8,
 }
 
 impl SquareChannel {
@@ -61,6 +69,9 @@ impl SquareChannel {
         self.raising_envelope = self.nr2 & 0x08 != 0;
         self.envelope_pace = self.nr2 & 0x07;
         self.envelope_timer = self.envelope_pace;
+        self.sweep_pace = (self.nr0 >> 4) & 0x7;
+        self.sweep_single_step = self.nr0 & 0x7;
+        self.raising_sweep = (self.nr0 & 0x08) == 0;
     }
 
     fn clock_length(&mut self) {
@@ -87,6 +98,32 @@ impl SquareChannel {
                 self.volume += 1;
             } else if !self.raising_envelope && self.volume > 0 {
                 self.volume -= 1;
+            }
+        }
+    }
+
+    fn clock_sweep(&mut self) {
+        if self.sweep_pace == 0 {
+            return;
+        }
+        if self.sweep_timer > 0 {
+            self.sweep_timer -= 1;
+        }
+
+        if self.sweep_timer == 0 {
+            self.sweep_timer = self.sweep_pace;
+            let new_period = if self.raising_sweep {
+                self.period + self.period / 2u16.pow(self.sweep_single_step as u32)
+            } else {
+                self.period - self.period / 2u16.pow(self.sweep_single_step as u32)
+            };
+            if new_period > 0x7ff || (!self.raising_sweep && new_period == 0) {
+                self.enabled = false;
+            } else {
+                self.nr3 = new_period as u8;
+                self.nr4 = (self.nr4 & 0xF8) | ((new_period >> 8) as u8 & 0x7);
+                self.period = new_period;
+                self.period_timer = 2048 - self.period as i16;
             }
         }
     }
@@ -167,6 +204,7 @@ impl Apu {
             0xff25 => self.nr51,
             0xff24 => self.nr50,
 
+            0xff10 => self.ch1.nr0 | 0x80,
             0xff11 => self.ch1.nr1 | 0x3f,
             0xff12 => self.ch1.nr2,
             0xff13 => 0xff,
@@ -179,7 +217,7 @@ impl Apu {
 
             0xff30..=0xff3f => self.wave_pattern[addr as usize - 0xff30],
             _ => 0xff,
-            _ => todo!("Invalid read at 0x{:04X}", addr),
+            // _ => todo!("Invalid read at 0x{:04X}", addr),
         }
     }
 
@@ -202,6 +240,10 @@ impl Apu {
             0xff25 => self.nr51 = data,
             0xff24 => self.nr50 = data,
 
+            0xff10 => {
+                self.ch1.nr0 = data | 0x80;
+                self.ch1.sweep_pace = (self.ch1.nr0 >> 4) & 0x7;
+            }
             0xff11 => self.ch1.nr1 = data,
             0xff12 => self.ch1.nr2 = data,
             0xff13 => self.ch1.nr3 = data,
@@ -223,8 +265,7 @@ impl Apu {
             }
 
             0xff30..=0xff3f => self.wave_pattern[addr as usize - 0xff30] = data,
-            _ => {}
-            _ => todo!("Invalid read at 0x{:04X}", addr),
+            _ => {} // _ => todo!("Invalid read at 0x{:04X}", addr),
         }
     }
 
@@ -246,6 +287,7 @@ impl Apu {
                 self.ch1.clock_envelope();
                 self.ch2.clock_envelope();
             }
+            1 | 5 => self.ch1.clock_sweep(),
             _ => {}
         }
         self.frame_sequencer = self.frame_sequencer.wrapping_add(1);
