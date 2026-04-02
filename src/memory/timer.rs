@@ -3,6 +3,12 @@ const TIMA_ADDR: u16 = 0xff05;
 const TMA_ADDR: u16 = 0xff06;
 const TAC_ADDR: u16 = 0xff07;
 
+#[derive(Default)]
+pub struct TimerResult {
+    pub interrupt: bool,
+    pub apu_tick: bool,
+}
+
 pub struct Timer {
     internal_timer: u16,
     tac: u8,
@@ -63,21 +69,23 @@ impl Timer {
         }
     }
 
-    pub fn step(&mut self, mcycles: u8) -> bool {
-        let mut req_int = false;
+    pub fn step(&mut self, mcycles: u8) -> TimerResult {
+        let mut res = TimerResult::default();
         for _ in 0..mcycles {
-            req_int |= self.step_mcycle();
+            let step = self.step_mcycle();
+            res.interrupt |= step.interrupt;
+            res.apu_tick |= step.apu_tick;
         }
-        req_int
+        res
     }
 
-    pub fn step_mcycle(&mut self) -> bool {
-        let mut request_interrupt = false;
+    pub fn step_mcycle(&mut self) -> TimerResult {
+        let mut interrupt = false;
 
         if self.overflow_pending {
             if !self.tima_written_this_mcycle {
                 self.tima = self.tma;
-                request_interrupt = true;
+                interrupt = true;
             }
             self.overflow_pending = false;
         }
@@ -85,14 +93,19 @@ impl Timer {
         self.tima_written_this_mcycle = false;
 
         let old_edge = self.get_timer_edge();
+        let old_apu_edge = self.get_apu_edge();
         self.internal_timer = self.internal_timer.wrapping_add(4);
         let edge = self.get_timer_edge();
+        let apu_edge = self.get_apu_edge();
 
         let timer_tick = old_edge && !edge;
         if timer_tick {
             self.apply_timer_tick();
         }
-        request_interrupt
+        TimerResult {
+            interrupt,
+            apu_tick: old_apu_edge && !apu_edge,
+        }
     }
 
     fn get_div(&self) -> u8 {
@@ -108,6 +121,10 @@ impl Timer {
                 3 => (self.internal_timer & 0x0080) > 0,
                 _ => unreachable!(),
             }
+    }
+
+    fn get_apu_edge(&self) -> bool {
+        (self.internal_timer & 0x1000) > 0
     }
 
     fn apply_timer_tick(&mut self) {

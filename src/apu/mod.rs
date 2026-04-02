@@ -1,4 +1,7 @@
 #[derive(Default)]
+struct Sweep {}
+
+#[derive(Default)]
 struct SquareChannel {
     nr0: u8,
     nr1: u8,
@@ -54,11 +57,38 @@ impl SquareChannel {
         self.length_timer = 64 - (self.nr1 & 0x3f);
         self.period = self.nr3 as u16 | ((self.nr4 as u16 & 0x7) << 8);
         self.period_timer = 2048 - self.period as i16;
-        self.duty_pos = 0;
         self.volume = (self.nr2 >> 4) & 0xf;
         self.raising_envelope = self.nr2 & 0x08 != 0;
         self.envelope_pace = self.nr2 & 0x07;
         self.envelope_timer = self.envelope_pace;
+    }
+
+    fn clock_length(&mut self) {
+        let length_enable = (self.nr4 & 0x40) != 0;
+
+        if length_enable && self.length_timer > 0 {
+            self.length_timer -= 1;
+            if self.length_timer == 0 {
+                self.enabled = false;
+            }
+        }
+    }
+
+    fn clock_envelope(&mut self) {
+        if self.envelope_pace == 0 {
+            return;
+        }
+        if self.envelope_timer > 0 {
+            self.envelope_timer -= 1;
+        }
+        if self.envelope_timer == 0 {
+            self.envelope_timer = self.envelope_pace;
+            if self.raising_envelope && self.volume < 15 {
+                self.volume += 1;
+            } else if !self.raising_envelope && self.volume > 0 {
+                self.volume -= 1;
+            }
+        }
     }
 }
 
@@ -74,6 +104,7 @@ pub struct Apu {
 
     pub sample_rate_mcycles: u8,
     cur_cycles: u8,
+    frame_sequencer: u8,
     samples: Vec<f32>,
 }
 
@@ -95,6 +126,7 @@ impl Apu {
             wave_pattern: [0u8; 16],
             sample_rate_mcycles,
             cur_cycles: 0,
+            frame_sequencer: 0,
             samples: Vec::new(),
         }
     }
@@ -113,7 +145,25 @@ impl Apu {
 
     pub fn read(&self, addr: u16) -> u8 {
         match addr {
-            0xff26 => self.nr52 | 0x70,
+            0xff26 => {
+                let mut val = 0x70; // I bit 4-6 sono solitamente 1
+                if self.enabled {
+                    val |= 0x80;
+                }
+                if self.ch1.enabled {
+                    val |= 0x01;
+                }
+                if self.ch2.enabled {
+                    val |= 0x02;
+                }
+                // if self.ch3.enabled {
+                //     val |= 0x04;
+                // }
+                // if self.ch4.enabled {
+                //     val |= 0x08;
+                // }
+                val
+            }
             0xff25 => self.nr51,
             0xff24 => self.nr50,
 
@@ -135,7 +185,20 @@ impl Apu {
 
     pub fn write(&mut self, addr: u16, data: u8) {
         match addr {
-            0xff26 => self.nr52 = (self.nr52 & 0x7f) | (data & 0x80),
+            0xff26 => {
+                let old_enabled = self.enabled;
+                self.enabled = (data & 0x80) != 0;
+
+                // Se l'APU viene spenta (Power Off)
+                if old_enabled && !self.enabled {
+                    // self.reset_registers();
+                    self.ch1.enabled = false;
+                    self.ch2.enabled = false;
+                    // self.ch3.enabled = false;
+                    // self.ch4.enabled = false;
+                }
+            }
+
             0xff25 => self.nr51 = data,
             0xff24 => self.nr50 = data,
 
@@ -173,6 +236,21 @@ impl Apu {
         self.sample_rate_mcycles = (1048576.0 / sample_rate_khz) as u8;
     }
 
+    pub fn divapu_tick(&mut self) {
+        match self.frame_sequencer % 8 {
+            0 | 2 | 4 | 6 => {
+                self.ch1.clock_length();
+                self.ch2.clock_length();
+            }
+            7 => {
+                self.ch1.clock_envelope();
+                self.ch2.clock_envelope();
+            }
+            _ => {}
+        }
+        self.frame_sequencer = self.frame_sequencer.wrapping_add(1);
+    }
+
     fn mix(&self) -> (f32, f32) {
         let channels = [self.ch1.output(), self.ch2.output(), 0., 0.];
         let mut left = 0.;
@@ -196,4 +274,3 @@ impl Apu {
         (left, right)
     }
 }
-

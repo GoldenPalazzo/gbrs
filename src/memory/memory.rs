@@ -119,8 +119,12 @@ impl MemoryBus {
         if ints & Interrupt::LcdStat as u8 != 0 {
             self.interrupts.request(Interrupt::LcdStat);
         }
-        if self.timer.step(mcycles) {
+        let timer = self.timer.step(mcycles);
+        if timer.interrupt {
             self.interrupts.request(Interrupt::Timer);
+        }
+        if timer.apu_tick {
+            self.apu.divapu_tick();
         }
     }
 }
