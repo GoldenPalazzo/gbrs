@@ -1,11 +1,17 @@
 mod squarechannel;
 mod wavechannel;
-use crate::apu::{squarechannel::SquareChannel, wavechannel::WaveChannel};
+mod noisechannel;
+use crate::apu::{
+    noisechannel::NoiseChannel,
+    squarechannel::SquareChannel,
+    wavechannel::WaveChannel
+};
 
 pub struct Apu {
     ch1: SquareChannel,
     ch2: SquareChannel,
     ch3: WaveChannel,
+    ch4: NoiseChannel,
     nr50: u8,
     nr51: u8,
     nr52: u8,
@@ -29,6 +35,7 @@ impl Apu {
             ch1: SquareChannel::default(),
             ch2: SquareChannel::default(),
             ch3: WaveChannel::default(),
+            ch4: NoiseChannel::default(),
             nr50: 0,
             nr51: 0,
             nr52: 0,
@@ -44,6 +51,7 @@ impl Apu {
         self.ch1.step(mcycles);
         self.ch2.step(mcycles);
         self.ch3.step(mcycles);
+        self.ch4.step(mcycles);
         self.cur_cycles += mcycles;
         if self.cur_cycles >= self.sample_rate_mcycles {
             let mixed = self.mix();
@@ -58,20 +66,20 @@ impl Apu {
             0xff26 => {
                 let mut val = 0x70; // I bit 4-6 sono solitamente 1
                 if self.enabled {
-                    val |= 0x80;
+                    val |= MASTER_ONOFF_FLAG;
                 }
                 if self.ch1.enabled {
-                    val |= 0x01;
+                    val |= MASTER_CH1_FLAG;
                 }
                 if self.ch2.enabled {
-                    val |= 0x02;
+                    val |= MASTER_CH2_FLAG;
                 }
                 if self.ch3.enabled {
-                    val |= 0x04;
+                    val |= MASTER_CH3_FLAG;
                 }
-                // if self.ch4.enabled {
-                //     val |= 0x08;
-                // }
+                if self.ch4.enabled {
+                    val |= MASTER_CH4_FLAG;
+                }
                 val
             }
             0xff25 => self.nr51,
@@ -80,10 +88,10 @@ impl Apu {
             0xff10..=0xff14 => self.ch1.read(addr - 0xff10),
             0xff16..=0xff19 => self.ch2.read(addr - 0xff15),
             0xff1a..=0xff1e => self.ch3.read(addr),
+            0xff20..=0xff23 => self.ch4.read(addr),
 
             0xff30..=0xff3f => self.ch3.read(addr),
             _ => 0xff,
-            // _ => todo!("Invalid read at 0x{:04X}", addr),
         }
     }
 
@@ -99,7 +107,7 @@ impl Apu {
                     self.ch1.enabled = false;
                     self.ch2.enabled = false;
                     self.ch3.enabled = false;
-                    // self.ch4.enabled = false;
+                    self.ch4.enabled = false;
                 }
             }
 
@@ -109,8 +117,10 @@ impl Apu {
             0xff10..=0xff14 => self.ch1.write(addr - 0xff10, data),
             0xff16..=0xff19 => self.ch2.write(addr - 0xff15, data),
             0xff1a..=0xff1e => self.ch3.write(addr, data),
+            0xff20..=0xff23 => self.ch4.write(addr, data),
+
             0xff30..=0xff3f => self.ch3.write(addr, data),
-            _ => {} // _ => todo!("Invalid read at 0x{:04X}", addr),
+            _ => {}
         }
     }
 
@@ -128,10 +138,12 @@ impl Apu {
                 self.ch1.clock_length();
                 self.ch2.clock_length();
                 self.ch3.clock_length();
+                self.ch4.clock_length();
             }
             7 => {
                 self.ch1.clock_envelope();
                 self.ch2.clock_envelope();
+                self.ch4.clock_envelope();
             }
             1 | 5 => self.ch1.clock_sweep(),
             _ => {}
@@ -140,7 +152,12 @@ impl Apu {
     }
 
     fn mix(&self) -> (f32, f32) {
-        let channels = [self.ch1.output(), self.ch2.output(), self.ch3.output(), 0.];
+        let channels = [
+            self.ch1.output(),
+            self.ch2.output(),
+            self.ch3.output(),
+            self.ch4.output(),
+        ];
         let mut left = 0.;
         let mut right = 0.;
 
