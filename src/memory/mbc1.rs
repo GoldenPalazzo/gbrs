@@ -8,6 +8,7 @@ pub struct Mbc1 {
     rom_bank: u8,
     ram_bank_rom_upper: u8,
     is_advanced_banking_mode: bool,
+    num_banks: usize,
 
     has_ram: bool,
     has_battery: bool,
@@ -32,6 +33,7 @@ impl Default for Mbc1 {
             rom_bank: 1,
             ram_bank_rom_upper: 0,
             is_advanced_banking_mode: false,
+            num_banks: 1,
             has_ram: false,
             has_battery: false,
         }
@@ -41,18 +43,20 @@ impl Default for Mbc1 {
 impl Mapper for Mbc1 {
     fn set_rom(&mut self, rom: Vec<u8>) {
         self.rom = rom;
+        self.num_banks = (self.rom.len() / 0x4000).max(1) as usize;
     }
     fn read(&self, addr: u16) -> u8 {
         match addr {
             0x0000..=0x3fff => {
                 let used_bank = if self.is_advanced_banking_mode {
-                    (self.ram_bank_rom_upper as usize) << 5
+                    ((self.ram_bank_rom_upper as usize) << 5) % self.num_banks
                 } else { 0 };
                 self.rom[addr as usize + used_bank * 0x4000]
             }
             0x4000..=0x7fff => {
                 let used_bank =
-                    self.rom_bank.max(1) as usize | (self.ram_bank_rom_upper as usize) << 5;
+                    (self.rom_bank.max(1) as usize | (self.ram_bank_rom_upper as usize) << 5)
+                    % self.num_banks;
                 self.rom[addr as usize - 0x4000 + used_bank * 0x4000]
             }
             0xa000..=0xbfff => {

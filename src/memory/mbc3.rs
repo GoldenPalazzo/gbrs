@@ -9,6 +9,7 @@ pub struct Mbc3 {
     rom_bank: u8,
     ram_rtc_select: u8,
     latch_rtc: u8,
+    num_banks: usize,
 
     latest_rtc_snapshot: DateTime<Local>,
     has_ram: bool,
@@ -37,6 +38,7 @@ impl Default for Mbc3 {
             ram_rtc_select: 0,
             latch_rtc: 67, // enforce correct latching procedure, 00 -> 01
             latest_rtc_snapshot: Local::now(),
+            num_banks: 1,
             has_ram: false,
             has_timer: false,
             has_battery: false,
@@ -47,12 +49,16 @@ impl Default for Mbc3 {
 impl Mapper for Mbc3 {
     fn set_rom(&mut self, rom: Vec<u8>) {
         self.rom = rom;
+        self.num_banks = (self.rom.len() / 0x4000).max(1) as usize;
     }
     fn read(&self, addr: u16) -> u8 {
         match addr {
             0x0000..=0x3fff => self.rom[addr as usize],
-            0x4000..=0x7fff => 
-                self.rom[addr as usize - 0x4000 + self.rom_bank.max(1) as usize * 0x4000],
+            0x4000..=0x7fff => {
+                let bank = self.rom_bank.max(1) as usize;
+                let used_bank = bank % self.num_banks;
+                self.rom[addr as usize - 0x4000 + used_bank * 0x4000]
+            },
             0xa000..=0xbfff => match (self.has_ram, self.has_timer, self.ram_rtc_select) {
                 (true, _, 0x00..=0x07) => self.ram[addr as usize - 0xa000 + self.ram_rtc_select as usize * 0x2000],
                 (_, true, 0x08) => self.latest_rtc_snapshot.second() as u8,
