@@ -1,11 +1,10 @@
 mod squarechannel;
 mod wavechannel;
 mod noisechannel;
-use crate::apu::{
-    noisechannel::NoiseChannel,
-    squarechannel::SquareChannel,
-    wavechannel::WaveChannel
-};
+use noisechannel::NoiseChannel;
+use squarechannel::SquareChannel;
+use wavechannel::WaveChannel;
+use alloc::vec::Vec;
 
 pub struct Apu {
     ch1: SquareChannel,
@@ -125,7 +124,7 @@ impl Apu {
     }
 
     pub fn drain_samples(&mut self) -> Vec<f32> {
-        std::mem::take(&mut self.samples)
+        core::mem::take(&mut self.samples)
     }
 
     pub fn set_sample_rate(&mut self, sample_rate_khz: f32) {

@@ -1,5 +1,7 @@
-use crate::memory::cartridge::Mapper;
-use chrono::{DateTime, Local, Timelike, Datelike};
+use super::cartridge::Mapper;
+use super::rtc::{RtcSource, MockRtc};
+use alloc::{boxed::Box, vec::Vec};
+// use chrono::{DateTime, Local, Timelike, Datelike};
 
 pub struct Mbc3 {
     rom: Vec<u8>,
@@ -11,7 +13,8 @@ pub struct Mbc3 {
     latch_rtc: u8,
     num_banks: usize,
 
-    latest_rtc_snapshot: DateTime<Local>,
+    // latest_rtc_snapshot: DateTime<Local>,
+    latest_rtc_snapshot: Box<dyn RtcSource>,
     has_ram: bool,
     has_timer: bool,
     has_battery: bool,
@@ -37,7 +40,7 @@ impl Default for Mbc3 {
             rom_bank: 1,
             ram_rtc_select: 0,
             latch_rtc: 67, // enforce correct latching procedure, 00 -> 01
-            latest_rtc_snapshot: Local::now(),
+            latest_rtc_snapshot: Box::new(MockRtc{}),
             num_banks: 1,
             has_ram: false,
             has_timer: false,
@@ -80,7 +83,7 @@ impl Mapper for Mbc3 {
             0x6000..=0x7fff => {
                 if !self.has_timer {return;}
                 if self.latch_rtc == 0 && data == 1 {
-                    self.latest_rtc_snapshot = Local::now();
+                    self.latest_rtc_snapshot.snapshot();
                 }
                 self.latch_rtc = data;
             },

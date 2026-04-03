@@ -1,13 +1,9 @@
-mod apu;
-mod cpu;
-mod memory;
-mod ppu;
-use crate::cpu::cpu::Cpu;
-use crate::memory::memory::MemoryBus;
+use gbrs_engine::cpu::cpu::Cpu;
+use gbrs_engine::memory::bus::MemoryBus;
 
 use std::env;
 use std::io::{self, Write};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use minifb::{Key, Scale, Window, WindowOptions};
 
@@ -163,11 +159,6 @@ fn main() -> std::io::Result<()> {
     let audio = AudioOutput::new();
     mem.apu.set_sample_rate(audio.get_sample_rate());
 
-    // let samples = mem.apu.drain_samples();
-    // audio_buffer.lock().unwrap().extend(samples);
-    println!("Loaded cart {:?}", mem.cart.title);
-    // let bps = vec![0x20f];
-    // let bps = [];
     main_loop(cpu, mem, window, audio, &None);
     Ok(())
 }

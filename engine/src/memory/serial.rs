@@ -16,9 +16,10 @@ pub struct Serial {
 
 impl Serial {
     pub fn step(&mut self, cycles: u8) {
+        // TODO: should implement interrupts here
         self.internal_cycles = self.internal_cycles.wrapping_add(cycles);
         if self.check_flag(FLAG_TRANSFER) && self.internal_cycles >= SAMPLE_CYCLES {
-            println!("Serial: {:?}", std::char::from_u32(self.data as u32));
+            // println!("Serial: {:?}", std::char::from_u32(self.data as u32));
             self.set_flag(FLAG_TRANSFER, false);
             self.internal_cycles = 0;
         }

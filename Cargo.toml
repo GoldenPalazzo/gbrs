@@ -1,3 +1,4 @@
 [workspace]
 members = ["engine", "desktop", "pico"]
+default-members = ["engine", "desktop"]
 resolver = "3"

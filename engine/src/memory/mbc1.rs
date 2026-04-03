@@ -1,4 +1,5 @@
-use crate::memory::cartridge::Mapper;
+use super::cartridge::Mapper;
+use alloc::vec::Vec;
 
 pub struct Mbc1 {
     rom: Vec<u8>,

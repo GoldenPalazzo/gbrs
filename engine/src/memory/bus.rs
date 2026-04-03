@@ -1,13 +1,11 @@
 use crate::apu::Apu;
-use crate::memory::cartridge::Cartridge;
-use crate::memory::interrupts::{Interrupt, InterruptController};
-use crate::memory::joypad::Joypad;
-use crate::memory::serial::Serial;
-use crate::memory::timer::Timer;
+use super::cartridge::Cartridge;
+use super::interrupts::{Interrupt, InterruptController};
+use super::joypad::Joypad;
+use super::serial::Serial;
+use super::timer::Timer;
 use crate::ppu::ppu::Ppu;
-use log::debug;
 
-// [derive(Default)]
 pub struct MemoryBus {
     pub cart: Cartridge,
     wram: [u8; 0x2000],
@@ -38,6 +36,7 @@ impl Default for MemoryBus {
 }
 
 impl MemoryBus {
+    #[cfg(feature = "std")]
     pub fn from_file(path: &str) -> std::io::Result<Self> {
         Ok(Self {
             cart: Cartridge::from_file(path)?,
@@ -61,13 +60,7 @@ impl MemoryBus {
             0xff0f | 0xffff => self.interrupts.read(addr),
             0xff80..=0xfffe => self.hram[(addr as usize) - 0xff80],
 
-            _ => {
-                println!(
-                    "Read to address 0x{:04X} hasn't been implemented yet. Returning 0xff...",
-                    addr
-                );
-                0xff
-            }
+            _ => 0xff
         }
     }
 
@@ -96,10 +89,7 @@ impl MemoryBus {
             0xfea0..=0xfeff => {} // prohibited memory
             0xff40..=0xff4b => self.ppu.write(addr, data),
             0xff80..=0xfffe => self.hram[(addr as usize) - 0xff80] = data,
-            _ => println!(
-                "Write (data=0x{:02x}) to address 0x{:04X} hasn't been implemented yet. Ignoring...",
-                data, addr
-            ),
+            _ => {}
         }
     }
 

@@ -1,0 +1,3 @@
+[jobs.check-pico]
+command = ["cargo", "check", "-p", "gbrs-engine", "--target", "thumbv6m-none-eabi"]
+watch = ["engine/src"]

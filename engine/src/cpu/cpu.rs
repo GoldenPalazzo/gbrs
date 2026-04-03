@@ -1,10 +1,10 @@
-use crate::MemoryBus;
+use crate::memory::bus::MemoryBus;
 #[allow(unused_imports)]
-use crate::cpu::disasm::{Condition, Instruction, Operand, Reg8, Reg16};
-use crate::cpu::implements::*;
-use crate::cpu::registers::*;
+use super::disasm::{Condition, Instruction, Operand, Reg8, Reg16};
+use super::implements::*;
+use super::registers::*;
 #[allow(unused_imports)]
-use log::{debug, error, info, warn};
+// use log::{debug, error, info, warn};
 
 #[derive(Default)]
 pub struct Cpu {
@@ -28,6 +28,7 @@ impl Cpu {
         new
     }
 
+    #[cfg(feature = "std")]
     pub fn print_state(&self) {
         let r = &self.regs;
         let f = r.get_af() as u8;
@@ -36,46 +37,47 @@ impl Cpu {
         let h = if f & 0x20 != 0 { 'H' } else { '-' };
         let c = if f & 0x10 != 0 { 'C' } else { '-' };
 
-        debug!("--- CPU State ---");
-        debug!(
-            "PC: {:04X}  SP: {:04X}  AF: {:04X} [{}{}{}{}]",
-            r.get_pc(),
-            r.get_sp(),
-            r.get_af(),
-            z,
-            n,
-            h,
-            c
-        );
-        debug!(
-            "BC: {:04X}  DE: {:04X}  HL: {:04X}",
-            r.get_bc(),
-            r.get_de(),
-            r.get_hl()
-        );
-        debug!("-----------------");
+        // debug!("--- CPU State ---");
+        // debug!(
+        //     "PC: {:04X}  SP: {:04X}  AF: {:04X} [{}{}{}{}]",
+        //     r.get_pc(),
+        //     r.get_sp(),
+        //     r.get_af(),
+        //     z,
+        //     n,
+        //     h,
+        //     c
+        // );
+        // debug!(
+        //     "BC: {:04X}  DE: {:04X}  HL: {:04X}",
+        //     r.get_bc(),
+        //     r.get_de(),
+        //     r.get_hl()
+        // );
+        // debug!("-----------------");
     }
 
+    #[cfg(feature = "std")]
     pub fn print_state_doctor(&self, bus: &MemoryBus) {
         let r = &self.regs;
         let pc = r.get_pc();
-        debug!(
-            "A:{:02X} F:{:02X} B:{:02X} C:{:02X} D:{:02X} E:{:02X} H:{:02X} L:{:02X} SP:{:04X} PC:{:04X} PCMEM:{:02X},{:02X},{:02X},{:02X}",
-            r.get_a(),
-            r.get_af() as u8,
-            r.get_b(),
-            r.get_c(),
-            r.get_d(),
-            r.get_e(),
-            r.get_h(),
-            r.get_l(),
-            r.get_sp(),
-            pc,
-            bus.read(pc),
-            bus.read(pc + 1),
-            bus.read(pc + 2),
-            bus.read(pc + 3)
-        );
+        // debug!(
+        //     "A:{:02X} F:{:02X} B:{:02X} C:{:02X} D:{:02X} E:{:02X} H:{:02X} L:{:02X} SP:{:04X} PC:{:04X} PCMEM:{:02X},{:02X},{:02X},{:02X}",
+        //     r.get_a(),
+        //     r.get_af() as u8,
+        //     r.get_b(),
+        //     r.get_c(),
+        //     r.get_d(),
+        //     r.get_e(),
+        //     r.get_h(),
+        //     r.get_l(),
+        //     r.get_sp(),
+        //     pc,
+        //     bus.read(pc),
+        //     bus.read(pc + 1),
+        //     bus.read(pc + 2),
+        //     bus.read(pc + 3)
+        // );
     }
 
     pub fn step(&mut self, mem_bus: &mut MemoryBus) -> u8 {
@@ -107,11 +109,11 @@ impl Cpu {
                 _ => self.execute_instruction(mem_bus, &instr),
             }
         } else {
-            panic!(
-                "Invalid opcode 0x{:02X} at 0x{:04X}",
-                opcode,
-                self.regs.get_pc().wrapping_sub(1)
-            );
+            // panic!(
+            //     "Invalid opcode 0x{:02X} at 0x{:04X}",
+            //     opcode,
+            //     self.regs.get_pc().wrapping_sub(1)
+            // );
             0
         }
     }

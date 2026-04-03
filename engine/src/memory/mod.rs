@@ -1,9 +1,10 @@
 mod cartridge;
 pub mod interrupts;
 mod joypad;
-pub mod memory;
+pub mod bus;
 mod serial;
 mod timer;
+mod rtc;
 
 mod romonly;
 mod mbc1;

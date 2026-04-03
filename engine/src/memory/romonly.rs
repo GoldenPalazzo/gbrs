@@ -1,4 +1,5 @@
-use crate::memory::cartridge::Mapper;
+use super::cartridge::Mapper;
+use alloc::vec::Vec;
 
 pub struct RomOnly {
     rom: [u8; 0x8000],
@@ -28,7 +29,7 @@ impl Mapper for RomOnly {
     }
     fn write(&mut self, addr: u16, data: u8) {
         match addr {
-            0x0000..=0x7fff => println!("Write in ROM 0x{:04X} ignored", addr),
+            0x0000..=0x7fff => {},
             0xa000..=0xbfff => self.opt_ram[addr as usize] = data,
             _ => unreachable!(),
         }

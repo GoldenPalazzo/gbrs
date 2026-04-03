@@ -1,4 +1,5 @@
 use crate::memory::interrupts::Interrupt;
+use alloc::vec::Vec;
 
 #[derive(Default, Debug, Clone, Copy)]
 #[repr(u8)]
