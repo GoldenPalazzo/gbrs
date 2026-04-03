@@ -425,15 +425,30 @@ dependencies = [
 ]
 
 [[package]]
-name = "gbrs"
+name = "gbrs-desktop"
 version = "0.1.0"
 dependencies = [
  "chrono",
  "cpal",
  "env_logger",
+ "gbrs-engine",
  "log",
  "minifb",
  "paste",
+]
+
+[[package]]
+name = "gbrs-engine"
+version = "0.1.0"
+dependencies = [
+ "paste",
+]
+
+[[package]]
+name = "gbrs-pico"
+version = "0.1.0"
+dependencies = [
+ "gbrs-engine",
 ]
 
 [[package]]
