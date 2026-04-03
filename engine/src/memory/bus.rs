@@ -30,7 +30,7 @@ impl Default for MemoryBus {
             interrupts: InterruptController::default(),
             ppu: Ppu::default(),
             joypad: Joypad::default(),
-            apu: Apu::new(95),
+            apu: Apu::new(0),
         }
     }
 }
@@ -42,6 +42,13 @@ impl MemoryBus {
             cart: Cartridge::from_file(path)?,
             ..Default::default()
         })
+    }
+
+    pub fn from_static(rom: &'static [u8]) -> Self {
+        Self {
+            cart: Cartridge::from_static(rom),
+            ..Default::default()
+        }
     }
 
     pub fn read(&self, addr: u16) -> u8 {

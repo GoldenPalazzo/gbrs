@@ -4,7 +4,7 @@ use alloc::{boxed::Box, vec::Vec};
 // use chrono::{DateTime, Local, Timelike, Datelike};
 
 pub struct Mbc3 {
-    rom: Vec<u8>,
+    rom: &'static [u8],
     ram: [u8; 0x8000],
 
     ram_timer_enable: bool,
@@ -34,7 +34,7 @@ impl Mbc3 {
 impl Default for Mbc3 {
     fn default() -> Self {
         Self {
-            rom: Vec::new(),
+            rom: &[],
             ram: [0u8; 0x8000],
             ram_timer_enable: false,
             rom_bank: 1,
@@ -51,8 +51,12 @@ impl Default for Mbc3 {
 
 impl Mapper for Mbc3 {
     fn set_rom(&mut self, rom: Vec<u8>) {
+        self.num_banks = (rom.len() / 0x4000).max(1) as usize;
+        self.rom = Box::leak(rom.into_boxed_slice());
+    }
+    fn set_rom_static(&mut self, rom: &'static [u8]) {
+        self.num_banks = (rom.len() / 0x4000).max(1) as usize;
         self.rom = rom;
-        self.num_banks = (self.rom.len() / 0x4000).max(1) as usize;
     }
     fn read(&self, addr: u16) -> u8 {
         match addr {
