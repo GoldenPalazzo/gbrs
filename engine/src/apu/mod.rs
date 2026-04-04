@@ -20,6 +20,8 @@ pub struct Apu {
     cur_cycles: u8,
     frame_sequencer: u8,
     samples: Vec<f32>,
+
+    pub debug_disable: bool
 }
 
 const MASTER_ONOFF_FLAG: u8 = 0x80;
@@ -43,10 +45,14 @@ impl Apu {
             cur_cycles: 0,
             frame_sequencer: 0,
             samples: Vec::new(),
+            debug_disable: false
         }
     }
 
     pub fn step(&mut self, mcycles: u8) {
+        if self.debug_disable {
+            return;
+        }
         self.ch1.step(mcycles);
         self.ch2.step(mcycles);
         self.ch3.step(mcycles);
