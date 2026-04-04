@@ -1,0 +1,16 @@
+[target.thumbv6m-none-eabi]
+rustflags = [
+  "-C", "link-arg=-Tlink.x",
+  # Code-size optimizations.
+  #   trap unreachable can save a lot of space, but requires nightly compiler.
+  #   uncomment the next line if you wish to enable it
+  # "-Z", "trap-unreachable=no",
+  "-C", "no-vectorize-loops",
+]
+runner = "elf2uf2-rs -d"
+
+[build]
+target = "thumbv6m-none-eabi"
+
+[env]
+DEFMT_LOG = "debug"
