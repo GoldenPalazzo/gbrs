@@ -57,6 +57,7 @@ impl MemoryBus {
             0x8000..=0x9fff => self.ppu.read(addr),
             0xa000..=0xbfff => self.cart.mapper.read(addr),
             0xc000..=0xdfff => self.wram[(addr as usize) - 0xc000],
+            0xe000..=0xfdff => self.wram[(addr as usize) - 0xe000], // echo ram
             // 0xd000..=0xdfff => self.switchable_wram[(addr as usize) - 0xd000],
             0xfe00..=0xfe9f => self.ppu.read(addr),
             0xff00 => self.joypad.read(addr),
@@ -83,7 +84,7 @@ impl MemoryBus {
             0xff10..=0xff26 => self.apu.write(addr, data),
             0xff30..=0xff3f => self.apu.write(addr, data),
             0xff0f | 0xffff => self.interrupts.write(addr, data),
-            0xe000..=0xfdff => panic!("Tried to write in echo ram 0x{:02X}!", addr),
+            0xe000..=0xfdff => self.wram[(addr as usize) - 0xe000] = data, // echo ram
             0xff46 => {
                 // OAM DMA transfer
                 let dma_base = (data as u16) << 8;
