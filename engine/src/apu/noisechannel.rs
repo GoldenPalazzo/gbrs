@@ -33,7 +33,7 @@ impl NoiseChannel {
     }
 
     pub fn step(&mut self, mcycles: u8) {
-        self.period -= mcycles as i16;
+        self.period = self.period.wrapping_sub(mcycles as i16);
         if self.period <= 0 {
             self.period += self.evaluate_period();
             let new_bit = (!(self.lsfr >> 1 ^ self.lsfr)) & 1;

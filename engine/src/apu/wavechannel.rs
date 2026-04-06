@@ -37,7 +37,7 @@ impl WaveChannel {
     }
 
     pub fn step(&mut self, mcycles: u8) {
-        self.period_timer -= mcycles as i16 * 2;
+        self.period_timer = self.period_timer.wrapping_sub(mcycles as i16 * 2);
         if self.period_timer <= 0 {
             self.period = self.nr3 as u16 | ((self.nr4 as u16 & 0x7) << 8);
             self.period_timer += 2048 - self.period as i16;
