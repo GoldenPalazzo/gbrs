@@ -47,7 +47,7 @@ impl NoiseChannel {
     pub fn trigger(&mut self) {
         self.enabled = true;
         if self.length_timer == 0 {
-            self.length_timer = 64 - self.nr1;
+            self.length_timer = 64 - (self.nr1 & 0x3f);
         }
         
         self.period = self.evaluate_period();
