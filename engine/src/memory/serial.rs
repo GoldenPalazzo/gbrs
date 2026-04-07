@@ -1,3 +1,6 @@
+#[cfg(feature = "std")]
+use std::print;
+
 pub const FLAG_TRANSFER: u8 = 0x80;
 pub const FLAG_HISPEED: u8 = 0x02;
 pub const FLAG_MASTER: u8 = 0x01;
@@ -19,6 +22,10 @@ impl Serial {
         // TODO: should implement interrupts here
         self.internal_cycles = self.internal_cycles.wrapping_add(cycles);
         if self.check_flag(FLAG_TRANSFER) && self.internal_cycles >= SAMPLE_CYCLES {
+            #[cfg(feature = "std")]
+            if let Some(c) = char::from_u32(self.data as u32) {
+                print!("{}", c);
+            }
             // println!("Serial: {:?}", std::char::from_u32(self.data as u32));
             self.set_flag(FLAG_TRANSFER, false);
             self.internal_cycles = 0;
