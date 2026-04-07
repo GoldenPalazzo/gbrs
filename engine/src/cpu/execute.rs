@@ -260,19 +260,19 @@ impl Cpu {
             }
             0xc0 | 0xc8 | 0xd0 | 0xd8 => { // RET cond
                 if self.check_cond_bits(opcode) {
-                    let addr = self._pop(bus);
+                    let addr = self.pop(bus);
                     self.regs.set_pc(addr);
                     return 5;
                 }
                 2
             }
             0xc9 => { // RET
-                let addr = self._pop(bus);
+                let addr = self.pop(bus);
                 self.regs.set_pc(addr);
                 4
             }
             0xd9 => { // RETI
-                let addr = self._pop(bus);
+                let addr = self.pop(bus);
                 self.regs.set_pc(addr);
                 self.ime_pending = true;
                 4
@@ -280,7 +280,7 @@ impl Cpu {
             0xc4 | 0xcc | 0xd4 | 0xdc => { // CALL cond, imm16
                 let addr = self.read_word(bus);
                 if self.check_cond_bits(opcode) {
-                    self._push(bus, self.regs.get_pc());
+                    self.push(bus, self.regs.get_pc());
                     self.regs.set_pc(addr);
                     return 6;
                 }
@@ -288,24 +288,24 @@ impl Cpu {
             }
             0xcd => { // CALL imm16
                 let addr = self.read_word(bus);
-                self._push(bus, self.regs.get_pc());
+                self.push(bus, self.regs.get_pc());
                 self.regs.set_pc(addr);
                6 
             }
             0xc7 | 0xcf | 0xd7 | 0xdf | 0xe7 | 0xef | 0xf7 | 0xff => { // RST tgt3
                 let tgt = (opcode & 0x38) as u16;
-                self._push(bus, self.regs.get_pc());
+                self.push(bus, self.regs.get_pc());
                 self.regs.set_pc(tgt);
                 4
             }
             0xc1 | 0xd1 | 0xe1 | 0xf1 => { // POP r16stk
-                let addr = self._pop(bus);
+                let addr = self.pop(bus);
                 self.write_r16_stk(opcode, addr);
                 3
             }
             0xc5 | 0xd5 | 0xe5 | 0xf5 => { // PUSH r16stk
                 let addr = self.read_r16_stk(opcode);
-                self._push(bus, addr);
+                self.push(bus, addr);
                 4
             }
             0xcb => {
