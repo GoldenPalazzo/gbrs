@@ -79,6 +79,8 @@ pub struct Ppu {
     sprites_on_line: [u8; 10],
     sprite_count: usize,
     obj_height: u8,
+
+    pub debug_skip_render: bool
 }
 
 impl Default for Ppu {
@@ -105,6 +107,7 @@ impl Default for Ppu {
             sprites_on_line: [0u8; 10],
             sprite_count: 0,
             obj_height: 8,
+            debug_skip_render: true
         }
     }
 }
