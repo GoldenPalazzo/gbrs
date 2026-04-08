@@ -138,6 +138,9 @@ impl Apu {
     }
 
     pub fn divapu_tick(&mut self) {
+        if self.debug_disable {
+            return;
+        }
         match self.frame_sequencer % 8 {
             0 | 2 | 4 | 6 => {
                 self.ch1.clock_length();
