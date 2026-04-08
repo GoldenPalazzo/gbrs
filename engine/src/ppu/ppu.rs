@@ -218,10 +218,7 @@ impl Ppu {
 
         self.render_bgline();
 
-        if self.lcdc & WIN_ENABLE_FLAG != 0
-            && self.wx < 167
-            && self.wy < 144
-            && self.ly >= self.wy
+        if self.lcdc & WIN_ENABLE_FLAG != 0 && self.wx < 167 && self.wy < 144 && self.ly >= self.wy
         {
             let win_start_x = (self.wx as usize).saturating_sub(7);
             self.render_winline(win_start_x, self.window_line_cnt as usize);
@@ -247,6 +244,17 @@ impl Ppu {
         let x_offset = (self.scx % 8) as usize;
         let mut fb_x = 0usize;
 
+        let pal = if self.lcdc & BG_WIN_ENABLE_PRIO_FLAG != 0 {
+            [
+                self.bgp & 3,
+                (self.bgp >> 2) & 3,
+                (self.bgp >> 4) & 3,
+                (self.bgp >> 6) & 3,
+            ]
+        } else {
+            [0u8; 4]
+        };
+
         for tile in 0..21 {
             let tilemap_x = ((self.scx as usize / 8) + tile) % 32;
             let tile_index = self.vram[bg_map_base + tile_y * 32 + tilemap_x] as usize;
@@ -260,18 +268,15 @@ impl Ppu {
                 self.vram[tile_data_ptr + tile_y_pixel * 2],
                 self.vram[tile_data_ptr + tile_y_pixel * 2 + 1],
             ];
-            let pixel_start = if tile == 0 {x_offset} else {0};
+            let pixel_start = if tile == 0 { x_offset } else { 0 };
             for x in pixel_start..8 {
-                if fb_x >= 160 {break};
+                if fb_x >= 160 {
+                    break;
+                };
                 let lo = (row[0] >> (7 - x)) & 1;
                 let hi = (row[1] >> (7 - x)) & 1;
                 let color = (hi << 1) | lo;
-                self.framebuffer[self.ly as usize * 160 + fb_x] =
-                    if self.lcdc & BG_WIN_ENABLE_PRIO_FLAG != 0 {
-                        (self.bgp >> (2 * color)) & 0b11
-                    } else {
-                        0
-                    };
+                self.framebuffer[self.ly as usize * 160 + fb_x] = pal[color as usize];
                 fb_x += 1;
             }
         }
@@ -292,6 +297,17 @@ impl Ppu {
         let tile_y_pixel = scrolled_y % 8;
         let mut fb_x = win_start_x;
 
+        let pal = if self.lcdc & BG_WIN_ENABLE_PRIO_FLAG != 0 {
+            [
+                self.bgp & 3,
+                (self.bgp >> 2) & 3,
+                (self.bgp >> 4) & 3,
+                (self.bgp >> 6) & 3,
+            ]
+        } else {
+            [0u8; 4]
+        };
+
         for tilemap_x in 0..20 {
             let tile_index = self.vram[win_map_base + tile_y * 32 + tilemap_x] as usize;
             let tile_data_ptr = if self.lcdc & BG_WIN_TILE_DATA_AREA_FLAG != 0 {
@@ -305,71 +321,64 @@ impl Ppu {
                 self.vram[tile_data_ptr + tile_y_pixel * 2 + 1],
             ];
             for x in 0..8 {
-                if fb_x >= 160 {break};
+                if fb_x >= 160 {
+                    break;
+                };
                 let lo = (row[0] >> (7 - x)) & 1;
                 let hi = (row[1] >> (7 - x)) & 1;
                 let color = (hi << 1) | lo;
-                self.framebuffer[self.ly as usize * 160 + fb_x] =
-                    if self.lcdc & BG_WIN_ENABLE_PRIO_FLAG != 0 {
-                        (self.bgp >> (2 * color)) & 0b11
-                    } else {
-                        0
-                    };
+                self.framebuffer[self.ly as usize * 160 + fb_x] = pal[color as usize];
                 fb_x += 1;
             }
         }
     }
 
     fn render_sprites(&mut self) {
-        let mut sprites_on_line = [0usize; 10];
-        let mut sprite_count = 0usize;
         let obj_data_base = 0x8000 - VRAM_ADDR_START as usize;
-        let obj_height = if self.lcdc & OBJ_SIZE_FLAG != 0 {
-            16u8
-        } else {
-            8u8
-        };
-        if self.lcdc & OBJ_ENABLE_FLAG != 0 {
-            for spr in 0..40 {
-                let y_16 = self.oam[spr * 4] as i32;
-                if self.ly as i32 >= y_16 - 16 && (self.ly as i32) < y_16 - 16 + obj_height as i32 {
-                    sprites_on_line[sprite_count] = spr;
-                    sprite_count += 1;
-                    if sprite_count == 10 {
-                        break;
-                    }
-                }
-            }
-        }
 
-        for i in (0..sprite_count).rev() {
-            let spr = sprites_on_line[i];
-            let y_16 = self.oam[spr * 4];
-            if y_16 == 0 || y_16 >= 160 { continue };
-            let x_8 = self.oam[spr * 4 + 1];
-            if x_8 == 0 || x_8 >= 168 { continue; }
+        for i in (0..self.sprite_count).rev() {
+            let spr = self.sprites_on_line[i] as usize;
+            let y_16 = self.oam[spr * 4] as i32;
+            let x_8 = self.oam[spr * 4 + 1] as i32;
             let index = self.oam[spr * 4 + 2];
             let attrs = self.oam[spr * 4 + 3];
-            
-            let tile_index = if obj_height == 16 {
+
+            let tile_index = if self.obj_height == 16 {
                 index & 0xFE
             } else {
                 index
             } as usize;
             let mut fb_x = (x_8 as usize).saturating_sub(8);
             let tile_data_ptr = obj_data_base + tile_index * 16;
-            let mut tile_y = self.ly as usize - (y_16 as usize - 16);
-            if attrs & 0x40 != 0 {
-                tile_y = obj_height as usize - 1 - tile_y;
+            let mut tile_y = (self.ly as i32 - (y_16 - 16)) as usize;
+
+            // TODO: understand why oam_scan contains invalid sprites
+            // This happened to me in Link's awakening when moving the map
+            // upwards
+            if tile_y >= self.obj_height as usize {
+                continue; // skip sprite
             }
 
+            if attrs & 0x40 != 0 {
+                tile_y = self.obj_height as usize - 1 - tile_y;
+            }
             let row = [
                 self.vram[tile_data_ptr + tile_y * 2],
                 self.vram[tile_data_ptr + tile_y * 2 + 1],
             ];
-            let palette = match attrs & 0x10 != 0 {
+            let pal_base = match attrs & 0x10 != 0 {
                 true => self.obp1,
                 false => self.obp0,
+            };
+            let pal = if self.lcdc & BG_WIN_ENABLE_PRIO_FLAG != 0 {
+                [
+                    0,
+                    (pal_base >> 2) & 3,
+                    (pal_base >> 4) & 3,
+                    (pal_base >> 6) & 3,
+                ]
+            } else {
+                [0u8; 4]
             };
             let pixel_start = 8usize.saturating_sub(x_8 as usize);
             for x in pixel_start..8 {
@@ -390,7 +399,7 @@ impl Ppu {
                     fb_x += 1;
                     continue;
                 }
-                self.framebuffer[self.ly as usize * 160 + fb_x] = (palette >> (2 * color)) & 0b11;
+                self.framebuffer[self.ly as usize * 160 + fb_x] = pal[color as usize];
                 fb_x += 1;
             }
         }
