@@ -249,6 +249,7 @@ impl Ppu {
     }
 
     fn render_scanline(&mut self) {
+        if self.debug_skip_render { return; }
         if self.lcdc & POWER_FLAG == 0 {
             return;
         }
@@ -280,6 +281,7 @@ impl Ppu {
         let tile_y_pixel = scrolled_y % 8;
         let x_offset = (self.scx % 8) as usize;
         let mut fb_x = 0usize;
+        let fb_y_off = self.ly as usize * 160;
 
         let pal = if self.lcdc & BG_WIN_ENABLE_PRIO_FLAG != 0 {
             [
@@ -313,7 +315,10 @@ impl Ppu {
                 let lo = (row[0] >> (7 - x)) & 1;
                 let hi = (row[1] >> (7 - x)) & 1;
                 let color = (hi << 1) | lo;
-                self.framebuffer[self.ly as usize * 160 + fb_x] = pal[color as usize];
+                unsafe {
+                    *self.framebuffer.get_unchecked_mut(fb_y_off + fb_x) = pal[color as usize];
+                }
+                // self.framebuffer[fb_y_off + fb_x] = pal[color as usize];
                 fb_x += 1;
             }
         }
@@ -333,6 +338,7 @@ impl Ppu {
         let tile_y = scrolled_y / 8;
         let tile_y_pixel = scrolled_y % 8;
         let mut fb_x = win_start_x;
+        let fb_y_off = self.ly as usize * 160;
 
         let pal = if self.lcdc & BG_WIN_ENABLE_PRIO_FLAG != 0 {
             [
@@ -364,7 +370,10 @@ impl Ppu {
                 let lo = (row[0] >> (7 - x)) & 1;
                 let hi = (row[1] >> (7 - x)) & 1;
                 let color = (hi << 1) | lo;
-                self.framebuffer[self.ly as usize * 160 + fb_x] = pal[color as usize];
+                unsafe {
+                    *self.framebuffer.get_unchecked_mut(fb_y_off + fb_x) = pal[color as usize];
+                }
+                // self.framebuffer[fb_y_off + fb_x] = pal[color as usize];
                 fb_x += 1;
             }
         }
@@ -372,6 +381,7 @@ impl Ppu {
 
     fn render_sprites(&mut self) {
         let obj_data_base = 0x8000 - VRAM_ADDR_START as usize;
+        let fb_y_off = self.ly as usize * 160;
 
         for i in (0..self.sprite_count).rev() {
             let spr = self.sprites_on_line[i] as usize;
@@ -414,7 +424,7 @@ impl Ppu {
             for x in pixel_start..8 {
                 let tile_x = if attrs & 0x20 != 0 { 7 - x } else { x };
                 if attrs & 0x80 != 0 {
-                    let bg_color = self.framebuffer[self.ly as usize * 160 + fb_x];
+                    let bg_color = self.framebuffer[fb_y_off + fb_x];
                     if bg_color != 0 {
                         fb_x += 1;
                         continue;
@@ -429,7 +439,10 @@ impl Ppu {
                     fb_x += 1;
                     continue;
                 }
-                self.framebuffer[self.ly as usize * 160 + fb_x] = pal[color as usize];
+                unsafe {
+                    *self.framebuffer.get_unchecked_mut(fb_y_off + fb_x) = pal[color as usize];
+                }
+                // self.framebuffer[self.ly as usize * 160 + fb_x] = pal[color as usize];
                 fb_x += 1;
             }
         }
