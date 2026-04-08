@@ -15,7 +15,7 @@ pub struct NoiseChannel {
     envelope_pace: u8,
     envelope_timer: u8,
 
-    period: i16, // 11 bits, overflows at $0x7ff
+    period: i32, // 11 bits, overflows at $0x7ff
 
     lsfr: u16,
 }
@@ -33,7 +33,7 @@ impl NoiseChannel {
     }
 
     pub fn step(&mut self, mcycles: u8) {
-        self.period = self.period.wrapping_sub(mcycles as i16);
+        self.period = self.period.wrapping_sub(mcycles as i32);
         if self.period <= 0 {
             self.period += self.evaluate_period();
             let new_bit = (!(self.lsfr >> 1 ^ self.lsfr)) & 1;
@@ -49,7 +49,7 @@ impl NoiseChannel {
         if self.length_timer == 0 {
             self.length_timer = 64 - (self.nr1 & 0x3f);
         }
-        
+
         self.period = self.evaluate_period();
         self.volume = (self.nr2 >> 4) & 0xf;
         self.raising_envelope = self.nr2 & 0x08 != 0;
@@ -58,13 +58,13 @@ impl NoiseChannel {
         self.lsfr = 0;
     }
 
-    fn evaluate_period(&self) -> i16 {
-        let divider = self.nr3 & 7;
-        let shift = (self.nr3 >> 4) & 0xf;
+    fn evaluate_period(&self) -> i32 {
+        let divider = (self.nr3 & 7) as i32;
+        let shift = ((self.nr3 >> 4) & 0xf) as u32;
         if divider == 0 {
-            2i16.pow(shift as u32 + 1)
+            2i32.pow(shift + 1)
         } else {
-            divider as i16 * 2i16.pow(shift as u32 + 2)
+            divider * 2i32.pow(shift + 2)
         }
     }
 
