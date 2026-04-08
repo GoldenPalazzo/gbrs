@@ -144,7 +144,12 @@ impl Ppu {
             OBP1_ADDR => self.obp1 = data,
             // 0xff48 | 0xff49 => {println!("Stub: write to obj palette {} (data=0x{:02X})", addr - 0xff48, data)}
             VRAM_ADDR_START..=VRAM_ADDR_END => self.vram[(addr - VRAM_ADDR_START) as usize] = data,
-            OAM_ADDR_START..=OAM_ADDR_END => self.oam[(addr - OAM_ADDR_START) as usize] = data,
+            OAM_ADDR_START..=OAM_ADDR_END => match self.state {
+                PpuState::HorizontalBlank | PpuState::VerticalBlank => {
+                    self.oam[(addr - OAM_ADDR_START) as usize] = data
+                }
+                _ => {}
+            },
             _ => unreachable!("Write at 0x{:04X} (data=0x{:02X})", addr, data),
         }
     }
@@ -380,13 +385,6 @@ impl Ppu {
             let mut fb_x = (x_8 as usize).saturating_sub(8);
             let tile_data_ptr = obj_data_base + tile_index * 16;
             let mut tile_y = (self.ly as i32 - (y_16 - 16)) as usize;
-
-            // TODO: understand why oam_scan contains invalid sprites
-            // This happened to me in Link's awakening when moving the map
-            // upwards
-            if tile_y >= self.obj_height as usize {
-                continue; // skip sprite
-            }
 
             if attrs & 0x40 != 0 {
                 tile_y = self.obj_height as usize - 1 - tile_y;
