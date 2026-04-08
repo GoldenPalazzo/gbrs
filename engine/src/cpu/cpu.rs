@@ -1,12 +1,11 @@
-use crate::memory::bus::MemoryBus;
 #[allow(unused_imports)]
 use super::disasm::{Condition, Instruction, Operand, Reg8, Reg16};
+use super::execute::*;
 use super::implements::*;
 use super::registers::*;
-use super::execute::*;
+use crate::memory::bus::MemoryBus;
 #[allow(unused_imports)]
 // use log::{debug, error, info, warn};
-
 #[derive(Default)]
 pub struct Cpu {
     pub regs: Registers,

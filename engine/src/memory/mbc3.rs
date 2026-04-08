@@ -1,5 +1,5 @@
 use super::cartridge::Mapper;
-use super::rtc::{RtcSource, MockRtc};
+use super::rtc::{MockRtc, RtcSource};
 use alloc::{boxed::Box, vec::Vec};
 // use chrono::{DateTime, Local, Timelike, Datelike};
 
@@ -40,7 +40,7 @@ impl Default for Mbc3 {
             rom_bank: 1,
             ram_rtc_select: 0,
             latch_rtc: 67, // enforce correct latching procedure, 00 -> 01
-            latest_rtc_snapshot: Box::new(MockRtc{}),
+            latest_rtc_snapshot: Box::new(MockRtc {}),
             num_banks: 1,
             has_ram: false,
             has_timer: false,
@@ -65,17 +65,19 @@ impl Mapper for Mbc3 {
                 let bank = self.rom_bank.max(1) as usize;
                 let used_bank = bank % self.num_banks;
                 self.rom[addr as usize - 0x4000 + used_bank * 0x4000]
-            },
+            }
             0xa000..=0xbfff => match (self.has_ram, self.has_timer, self.ram_rtc_select) {
-                (true, _, 0x00..=0x07) => self.ram[addr as usize - 0xa000 + self.ram_rtc_select as usize * 0x2000],
+                (true, _, 0x00..=0x07) => {
+                    self.ram[addr as usize - 0xa000 + self.ram_rtc_select as usize * 0x2000]
+                }
                 (_, true, 0x08) => self.latest_rtc_snapshot.second() as u8,
                 (_, true, 0x09) => self.latest_rtc_snapshot.minute() as u8,
                 (_, true, 0x0a) => self.latest_rtc_snapshot.hour() as u8,
                 (_, true, 0x0b) => (self.latest_rtc_snapshot.ordinal0() & 0xff) as u8,
                 // TODO: need to handle carry and halt
                 (_, true, 0x0c) => (self.latest_rtc_snapshot.ordinal0() >> 8 & 1) as u8,
-                _ => 0xff
-            }
+                _ => 0xff,
+            },
             _ => 0xff,
         }
     }
@@ -85,20 +87,22 @@ impl Mapper for Mbc3 {
             0x2000..=0x3fff => self.rom_bank = data & 0x7f,
             0x4000..=0x5fff => self.ram_rtc_select = data,
             0x6000..=0x7fff => {
-                if !self.has_timer {return;}
+                if !self.has_timer {
+                    return;
+                }
                 if self.latch_rtc == 0 && data == 1 {
                     self.latest_rtc_snapshot.snapshot();
                 }
                 self.latch_rtc = data;
-            },
+            }
             0xa000..=0xbfff => match (self.ram_timer_enable, self.ram_rtc_select) {
-                (true, 0x00..=0x07) => self.ram[addr as usize - 0xa000 + self.ram_rtc_select as usize * 0x2000] = data,
+                (true, 0x00..=0x07) => {
+                    self.ram[addr as usize - 0xa000 + self.ram_rtc_select as usize * 0x2000] = data
+                }
                 // (true, 0x08..=0x0c) => ,
                 _ => {}
-            }
+            },
             _ => unreachable!("Invalid write at 0x{:04X}", addr),
         }
     }
 }
-
-

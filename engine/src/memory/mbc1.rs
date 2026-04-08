@@ -55,12 +55,14 @@ impl Mapper for Mbc1 {
             0x0000..=0x3fff => {
                 let used_bank = if self.is_advanced_banking_mode {
                     ((self.ram_bank_rom_upper as usize) << 5) % self.num_banks
-                } else { 0 };
+                } else {
+                    0
+                };
                 self.rom[addr as usize + used_bank * 0x4000]
             }
             0x4000..=0x7fff => {
-                let used_bank =
-                    (self.rom_bank.max(1) as usize | (self.ram_bank_rom_upper as usize) << 5)
+                let used_bank = (self.rom_bank.max(1) as usize
+                    | (self.ram_bank_rom_upper as usize) << 5)
                     % self.num_banks;
                 self.rom[addr as usize - 0x4000 + used_bank * 0x4000]
             }
@@ -76,7 +78,7 @@ impl Mapper for Mbc1 {
                     0xff
                 }
             }
-            _ => 0xff
+            _ => 0xff,
         }
     }
     fn write(&mut self, addr: u16, data: u8) {
@@ -95,9 +97,7 @@ impl Mapper for Mbc1 {
                     self.ram[addr as usize - 0xa000 + used_bank * 0x2000] = data;
                 }
             }
-            _ => {},
+            _ => {}
         }
     }
 }
-
-

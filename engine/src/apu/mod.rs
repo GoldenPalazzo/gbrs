@@ -1,10 +1,10 @@
+mod noisechannel;
 mod squarechannel;
 mod wavechannel;
-mod noisechannel;
+use alloc::vec::Vec;
 use noisechannel::NoiseChannel;
 use squarechannel::SquareChannel;
 use wavechannel::WaveChannel;
-use alloc::vec::Vec;
 
 pub struct Apu {
     ch1: SquareChannel,
@@ -21,7 +21,7 @@ pub struct Apu {
     frame_sequencer: u8,
     samples: Vec<f32>,
 
-    pub debug_disable: bool
+    pub debug_disable: bool,
 }
 
 const MASTER_ONOFF_FLAG: u8 = 0x80;
@@ -45,7 +45,7 @@ impl Apu {
             cur_cycles: 0,
             frame_sequencer: 0,
             samples: Vec::new(),
-            debug_disable: false
+            debug_disable: false,
         }
     }
 

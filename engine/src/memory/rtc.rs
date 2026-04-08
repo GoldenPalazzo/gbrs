@@ -6,14 +6,20 @@ pub trait RtcSource {
     fn snapshot(&mut self);
 }
 
-pub struct MockRtc {
-
-}
+pub struct MockRtc {}
 
 impl RtcSource for MockRtc {
-    fn second(&self) -> u8 {0}
-    fn minute(&self) -> u8 {0}
-    fn hour(&self) -> u8 {0}
-    fn ordinal0(&self) -> u16 {0}
+    fn second(&self) -> u8 {
+        0
+    }
+    fn minute(&self) -> u8 {
+        0
+    }
+    fn hour(&self) -> u8 {
+        0
+    }
+    fn ordinal0(&self) -> u16 {
+        0
+    }
     fn snapshot(&mut self) {}
 }

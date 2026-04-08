@@ -1,11 +1,16 @@
 #![no_std]
 #![no_main]
 
-use panic_halt as _;
-use rp2040_hal::{pac, sio::Sio, watchdog::Watchdog, entry, clocks::{Clock, init_clocks_and_plls}};
-use embedded_hal::digital::OutputPin;
 use embedded_alloc::LlffHeap as Heap;
+use embedded_hal::digital::OutputPin;
+use panic_halt as _;
 use rp2040_boot2;
+use rp2040_hal::{
+    clocks::{Clock, init_clocks_and_plls},
+    entry, pac,
+    sio::Sio,
+    watchdog::Watchdog,
+};
 
 #[unsafe(link_section = ".boot2")]
 #[used]
@@ -45,7 +50,7 @@ fn main() -> ! {
         // cortex_m::asm::delay(5_000_000);
         delay.delay_ms(1000);
 
-        led.set_low().unwrap();  // OFF
+        led.set_low().unwrap(); // OFF
         // cortex_m::asm::delay(5_000_000);
         delay.delay_ms(1000);
     }

@@ -1,11 +1,11 @@
+pub mod bus;
 mod cartridge;
 pub mod interrupts;
 mod joypad;
-pub mod bus;
+mod rtc;
 mod serial;
 mod timer;
-mod rtc;
 
-mod romonly;
 mod mbc1;
 mod mbc3;
+mod romonly;

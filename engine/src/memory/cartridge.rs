@@ -1,4 +1,4 @@
-use super::{romonly::RomOnly, mbc1::Mbc1, mbc3::Mbc3};
+use super::{mbc1::Mbc1, mbc3::Mbc3, romonly::RomOnly};
 use alloc::{boxed::Box, vec::Vec};
 
 pub trait Mapper {

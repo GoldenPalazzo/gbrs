@@ -32,10 +32,9 @@ impl Mapper for RomOnly {
     }
     fn write(&mut self, addr: u16, data: u8) {
         match addr {
-            0x0000..=0x7fff => {},
+            0x0000..=0x7fff => {}
             0xa000..=0xbfff => self.opt_ram[(addr as usize) - 0xa000] = data,
             _ => unreachable!(),
         }
     }
 }
-
