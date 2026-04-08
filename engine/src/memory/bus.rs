@@ -1,9 +1,9 @@
-use crate::apu::Apu;
 use super::cartridge::Cartridge;
 use super::interrupts::{Interrupt, InterruptController};
 use super::joypad::Joypad;
 use super::serial::Serial;
 use super::timer::Timer;
+use crate::apu::Apu;
 use crate::ppu::ppu::Ppu;
 
 pub struct MemoryBus {
@@ -68,7 +68,7 @@ impl MemoryBus {
             0xff0f | 0xffff => self.interrupts.read(addr),
             0xff80..=0xfffe => self.hram[(addr as usize) - 0xff80],
 
-            _ => 0xff
+            _ => 0xff,
         }
     }
 

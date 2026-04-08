@@ -135,7 +135,7 @@ impl Ppu {
             STAT_ADDR => self.stat = data,
             SCY_ADDR => self.scy = data,
             SCX_ADDR => self.scx = data,
-            LY_ADDR => self.ly = data,
+            LY_ADDR => {}
             LYC_ADDR => self.lyc = data,
             WY_ADDR => self.wy = data,
             WX_ADDR => self.wx = data,
