@@ -1,5 +1,5 @@
 #[cfg(feature = "std")]
-use std::print;
+use std::println;
 
 pub const FLAG_TRANSFER: u8 = 0x80;
 pub const FLAG_HISPEED: u8 = 0x02;
@@ -24,7 +24,7 @@ impl Serial {
         if self.check_flag(FLAG_TRANSFER) && self.internal_cycles >= SAMPLE_CYCLES {
             #[cfg(feature = "std")]
             if let Some(c) = char::from_u32(self.data as u32) {
-                print!("{}", c);
+                println!("Serial: '{}'", c);
             }
             // println!("Serial: {:?}", std::char::from_u32(self.data as u32));
             self.set_flag(FLAG_TRANSFER, false);
