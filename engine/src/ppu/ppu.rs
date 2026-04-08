@@ -1,5 +1,4 @@
 use crate::memory::interrupts::Interrupt;
-use alloc::vec::Vec;
 
 #[derive(Default, Debug, Clone, Copy)]
 #[repr(u8)]
@@ -77,6 +76,9 @@ pub struct Ppu {
 
     dots: u16,
     window_line_cnt: u8,
+    sprites_on_line: [u8; 10],
+    sprite_count: usize,
+    obj_height: u8,
 }
 
 impl Default for Ppu {
@@ -100,6 +102,9 @@ impl Default for Ppu {
             state: PpuState::default(),
             dots: 0,
             window_line_cnt: 0,
+            sprites_on_line: [0u8; 10],
+            sprite_count: 0,
+            obj_height: 8,
         }
     }
 }
@@ -194,6 +199,7 @@ impl Ppu {
                 if self.dots >= 80 {
                     self.dots -= 80;
                     self.state = PpuState::DrawingPixels;
+                    self.oam_scan();
                 }
             }
             PpuState::DrawingPixels => {
@@ -209,6 +215,29 @@ impl Ppu {
         };
         self.stat = (self.stat & !PPU_MODE) | (self.state as u8 & PPU_MODE);
         int
+    }
+
+    fn oam_scan(&mut self) {
+        self.obj_height = if self.lcdc & OBJ_SIZE_FLAG != 0 {
+            16u8
+        } else {
+            8u8
+        };
+        self.sprite_count = 0;
+        if self.lcdc & OBJ_ENABLE_FLAG != 0 {
+            for spr in 0..40 {
+                let y_16 = self.oam[spr * 4] as i32;
+                if self.ly as i32 >= y_16 - 16
+                    && (self.ly as i32) < y_16 - 16 + self.obj_height as i32
+                {
+                    self.sprites_on_line[self.sprite_count] = spr as u8;
+                    self.sprite_count += 1;
+                    if self.sprite_count == 10 {
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     fn render_scanline(&mut self) {
