@@ -79,6 +79,7 @@ impl Timer {
         res
     }
 
+    #[inline(always)]
     pub fn step_mcycle(&mut self) -> TimerResult {
         let mut interrupt = false;
 
