@@ -127,18 +127,18 @@ impl MemoryBus {
     }
 
     pub fn step_no_ppu(&mut self, mcycles: u8) {
-    self.serial.step(mcycles);
-    self.apu.step(mcycles);
-    let timer = self.timer.step(mcycles);
-    if timer.interrupt {
-        self.interrupts.request(Interrupt::Timer);
+        self.serial.step(mcycles);
+        self.apu.step(mcycles);
+        let timer = self.timer.step(mcycles);
+        if timer.interrupt {
+            self.interrupts.request(Interrupt::Timer);
+        }
+        if timer.apu_tick {
+            self.apu.divapu_tick();
+        }
     }
-    if timer.apu_tick {
-        self.apu.divapu_tick();
-    }
-}
 
-pub fn step_ppu(&mut self, mcycles: u8) {
+    pub fn step_ppu(&mut self, mcycles: u8) {
         let ints = self.ppu.step(mcycles);
         if ints & Interrupt::VBlank as u8 != 0 {
             self.interrupts.request(Interrupt::VBlank);
@@ -146,6 +146,5 @@ pub fn step_ppu(&mut self, mcycles: u8) {
         if ints & Interrupt::LcdStat as u8 != 0 {
             self.interrupts.request(Interrupt::LcdStat);
         }
-}
-
+    }
 }

@@ -1,4 +1,3 @@
-use super::cartridge::Mapper;
 use super::rtc::{MockRtc, RtcSource};
 use alloc::{boxed::Box, vec::Vec};
 // use chrono::{DateTime, Local, Timelike, Datelike};
@@ -49,16 +48,16 @@ impl Default for Mbc3 {
     }
 }
 
-impl Mapper for Mbc3 {
-    fn set_rom(&mut self, rom: Vec<u8>) {
+impl Mbc3 {
+    pub fn set_rom(&mut self, rom: Vec<u8>) {
         self.num_banks = (rom.len() / 0x4000).max(1) as usize;
         self.rom = Box::leak(rom.into_boxed_slice());
     }
-    fn set_rom_static(&mut self, rom: &'static [u8]) {
+    pub fn set_rom_static(&mut self, rom: &'static [u8]) {
         self.num_banks = (rom.len() / 0x4000).max(1) as usize;
         self.rom = rom;
     }
-    fn read(&self, addr: u16) -> u8 {
+    pub fn read(&self, addr: u16) -> u8 {
         match addr {
             0x0000..=0x3fff => self.rom[addr as usize],
             0x4000..=0x7fff => {
@@ -81,7 +80,7 @@ impl Mapper for Mbc3 {
             _ => 0xff,
         }
     }
-    fn write(&mut self, addr: u16, data: u8) {
+    pub fn write(&mut self, addr: u16, data: u8) {
         match addr {
             0x0000..=0x1fff => self.ram_timer_enable = data == 0xa,
             0x2000..=0x3fff => self.rom_bank = data & 0x7f,

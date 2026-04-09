@@ -3,16 +3,22 @@
 use gbrs_engine::cpu::cpu::Cpu;
 use gbrs_engine::memory::bus::MemoryBus;
 
-use panic_halt as _;
-use embedded_hal::digital::OutputPin;
-use rp2040_hal::{Timer, clocks::{Clock, ClocksManager, init_clocks_and_plls}, entry, fugit::RateExtU32, pac, pll::{common_configs::PLL_USB_48MHZ, setup_pll_blocking}, sio::Sio, watchdog::Watchdog, xosc::setup_xosc_blocking};
-use rp2040_hal::gpio::{
-    Pin, bank0::Gpio15,
-    FunctionSio, SioOutput,
-    PullDown
-};
-use rp2040_hal::pll::PLLConfig;
 use embedded_alloc::LlffHeap as Heap;
+use embedded_hal::digital::OutputPin;
+use panic_halt as _;
+use rp2040_hal::gpio::{FunctionSio, Pin, PullDown, SioOutput, bank0::Gpio15};
+use rp2040_hal::pll::PLLConfig;
+use rp2040_hal::{
+    Timer,
+    clocks::{Clock, ClocksManager, init_clocks_and_plls},
+    entry,
+    fugit::RateExtU32,
+    pac,
+    pll::{common_configs::PLL_USB_48MHZ, setup_pll_blocking},
+    sio::Sio,
+    watchdog::Watchdog,
+    xosc::setup_xosc_blocking,
+};
 
 #[unsafe(link_section = ".boot2")]
 #[used]
@@ -23,13 +29,12 @@ static HEAP: Heap = Heap::empty();
 
 static ROM: &[u8] = include_bytes!("cpu_instrs.gb");
 
-
 fn main_loop_dbg(
     mut cpu: Cpu,
     mut mem: MemoryBus,
     mut debug_led: Pin<Gpio15, FunctionSio<SioOutput>, PullDown>,
     mut delay: cortex_m::delay::Delay,
-    mut timer: Timer
+    mut timer: Timer,
 ) -> ! {
     let mut cycles_count: u32 = 0;
     let mut cpu_time: u64 = 0;
@@ -76,8 +81,8 @@ fn main_loop(
     mut mem: MemoryBus,
     mut debug_led: Pin<Gpio15, FunctionSio<SioOutput>, PullDown>,
     mut delay: cortex_m::delay::Delay,
-    timer: Timer
-    ) -> ! {
+    timer: Timer,
+) -> ! {
     let mut cycles_count: u32 = 0;
 
     let mut last_time = timer.get_counter().ticks();
@@ -97,9 +102,11 @@ fn main_loop(
     }
 }
 
-fn blink(delay: &mut cortex_m::delay::Delay,
+fn blink(
+    delay: &mut cortex_m::delay::Delay,
     led: &mut Pin<Gpio15, FunctionSio<SioOutput>, PullDown>,
-    ms: u32) {
+    ms: u32,
+) {
     led.set_high().unwrap();
     delay.delay_ms(ms);
     led.set_low().unwrap();
@@ -117,21 +124,28 @@ fn main() -> ! {
     let external_xtal_freq_hz = 12_000_000u32;
     let xosc = setup_xosc_blocking(pac.XOSC, external_xtal_freq_hz.Hz()).unwrap();
     let mut clocks = ClocksManager::new(pac.CLOCKS);
-    let pll_sys = setup_pll_blocking(pac.PLL_SYS, xosc.operating_frequency(), PLLConfig {
-        vco_freq: 1200_000_000u32.Hz(),
-        refdiv: 1,
-        post_div1: 3,
-        post_div2: 2,
-    }, &mut clocks, &mut pac.RESETS).unwrap();
+    let pll_sys = setup_pll_blocking(
+        pac.PLL_SYS,
+        xosc.operating_frequency(),
+        PLLConfig {
+            vco_freq: 1200_000_000u32.Hz(),
+            refdiv: 1,
+            post_div1: 3,
+            post_div2: 2,
+        },
+        &mut clocks,
+        &mut pac.RESETS,
+    )
+    .unwrap();
     let pll_usb = setup_pll_blocking(
         pac.PLL_USB,
         xosc.operating_frequency(),
         PLL_USB_48MHZ,
         &mut clocks,
-        &mut pac.RESETS
-        ).unwrap();
+        &mut pac.RESETS,
+    )
+    .unwrap();
     clocks.init_default(&xosc, &pll_sys, &pll_usb).unwrap();
-
 
     let delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
     let pins = rp2040_hal::gpio::Pins::new(
