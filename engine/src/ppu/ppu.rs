@@ -80,7 +80,7 @@ pub struct Ppu {
     sprite_count: usize,
     obj_height: u8,
 
-    pub debug_skip_render: bool
+    pub debug_skip_render: bool,
 }
 
 impl Default for Ppu {
@@ -107,7 +107,7 @@ impl Default for Ppu {
             sprites_on_line: [0u8; 10],
             sprite_count: 0,
             obj_height: 8,
-            debug_skip_render: true
+            debug_skip_render: false,
         }
     }
 }
@@ -249,7 +249,9 @@ impl Ppu {
     }
 
     fn render_scanline(&mut self) {
-        if self.debug_skip_render { return; }
+        if self.debug_skip_render {
+            return;
+        }
         if self.lcdc & POWER_FLAG == 0 {
             return;
         }
