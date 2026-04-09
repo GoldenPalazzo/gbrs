@@ -3,9 +3,24 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
+    fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs }: let
+  
+
+  outputs = { self, fenix, nixpkgs }: let
+    toolchain = with fenix.packages.x86_64-linux; combine [
+      stable.rustc
+      stable.cargo
+      stable.rustfmt
+      stable.clippy
+      stable.rust-src
+
+      targets.thumbv6m-none-eabi.stable.rust-std
+    ];
     pkgs = nixpkgs.legacyPackages."x86_64-linux";
     runtimeLibs = with pkgs; [
       wayland
@@ -20,17 +35,19 @@
     ];
   in {
     devShells."x86_64-linux".default = pkgs.mkShell {
-      buildInputs = with pkgs; [
-          cargo rustc rustfmt clippy rust-analyzer
+      buildInputs = [
+          toolchain
           # deps
-          pkg-config
-          alsa-lib
+          pkgs.rust-analyzer
+          pkgs.pkg-config
+          pkgs.alsa-lib
       ];
       shellHook = ''
         export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath runtimeLibs}:$LD_LIBRARY_PATH
         # export WINIT_UNIX_BACKEND=wayland 
       '';
-      env.RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
+      # env.RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
+      env.RUST_SRC_PATH = "${toolchain}/lib/rustlib/src/rust/library";
     };
   };
 }
