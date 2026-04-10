@@ -3,6 +3,7 @@ use gbrs_engine::memory::bus::MemoryBus;
 
 use std::env;
 use std::io::{self, Write};
+use std::path::Path;
 use std::time::Duration;
 
 use minifb::{Key, Scale, Window, WindowOptions};
@@ -154,8 +155,9 @@ fn main() -> std::io::Result<()> {
     .unwrap();
     window.update();
 
+    let path = Path::new(&args[1]);
     let cpu = Cpu::new();
-    let mut mem = MemoryBus::from_file(&args[1]).unwrap();
+    let mut mem = MemoryBus::from_file(path).unwrap();
     let audio = AudioOutput::new();
     mem.apu.set_sample_rate(audio.get_sample_rate());
 

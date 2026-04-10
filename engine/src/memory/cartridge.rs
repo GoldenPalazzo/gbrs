@@ -15,6 +15,38 @@ pub enum Mapper {
 }
 
 impl Mapper {
+    fn dirty_sram(&self) -> bool {
+        match self {
+            Mapper::RomOnly(_) => false,
+            Mapper::Mbc1(m) => m.has_battery && m.dirty_ram,
+            Mapper::Mbc3(m) => m.has_battery && m.dirty_ram,
+        }
+    }
+
+    fn clear_dirty(&mut self) {
+        match self {
+            Mapper::RomOnly(_) => {}
+            Mapper::Mbc1(m) => m.dirty_ram = false,
+            Mapper::Mbc3(m) => m.dirty_ram = false,
+        }
+    }
+
+    pub fn ram_slice(&self) -> Option<&[u8]> {
+        match self {
+            Mapper::Mbc1(m) if m.has_battery => Some(&m.ram),
+            Mapper::Mbc3(m) if m.has_battery => Some(&m.ram),
+            _ => None,
+        }
+    }
+
+    pub fn ram_slice_mut(&mut self) -> Option<&mut [u8]> {
+        match self {
+            Mapper::Mbc1(m) if m.has_battery => Some(&mut m.ram),
+            Mapper::Mbc3(m) if m.has_battery => Some(&mut m.ram),
+            _ => None,
+        }
+    }
+
     fn set_rom(&mut self, rom: Vec<u8>) {
         match self {
             Mapper::RomOnly(m) => m.set_rom(rom),
@@ -64,7 +96,7 @@ impl Default for Cartridge {
 
 impl Cartridge {
     #[cfg(feature = "std")]
-    pub fn from_file(path: &str) -> std::io::Result<Self> {
+    pub fn from_file(path: &std::path::Path) -> std::io::Result<Self> {
         let data = std::fs::read(path)?;
         let hw_type = data[0x147];
         // let title = String::from_utf8_lossy(&data[0x134..0x144]).to_string();
@@ -81,6 +113,18 @@ impl Cartridge {
             _ => todo!("Mapper {} not implemented", hw_type),
         };
         mapper.set_rom(data);
+        match std::fs::read(path.with_extension("gbsav")) {
+            Ok(saved) => {
+                if let Some(sram) = mapper.ram_slice_mut() {
+                    std::println!("Loaded save {:?}", path.with_extension("gbsav"));
+                    let len = sram.len().min(saved.len());
+                    sram[..len].copy_from_slice(&saved[..len]);
+                }
+            }
+            Err(_) => {
+                std::println!("No save {:?}", path.with_extension("gbsav"));
+            }
+        }
         // Ok(Self { title, mapper })
         Ok(Self { mapper })
     }

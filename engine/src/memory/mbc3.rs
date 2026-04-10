@@ -4,7 +4,7 @@ use alloc::{boxed::Box, vec::Vec};
 
 pub struct Mbc3 {
     rom: &'static [u8],
-    ram: [u8; 0x8000],
+    pub ram: [u8; 0x8000],
 
     ram_timer_enable: bool,
     rom_bank: u8,
@@ -16,7 +16,8 @@ pub struct Mbc3 {
     latest_rtc_snapshot: Box<dyn RtcSource>,
     has_ram: bool,
     has_timer: bool,
-    has_battery: bool,
+    pub has_battery: bool,
+    pub dirty_ram: bool,
 }
 
 impl Mbc3 {
@@ -44,6 +45,7 @@ impl Default for Mbc3 {
             has_ram: false,
             has_timer: false,
             has_battery: false,
+            dirty_ram: false,
         }
     }
 }

@@ -2,7 +2,7 @@ use alloc::{boxed::Box, vec::Vec};
 
 pub struct Mbc1 {
     rom: &'static [u8],
-    ram: [u8; 0x8000],
+    pub ram: [u8; 0x8000],
 
     ram_enable: bool,
     rom_bank: u8,
@@ -11,7 +11,8 @@ pub struct Mbc1 {
     num_banks: usize,
 
     has_ram: bool,
-    has_battery: bool,
+    pub has_battery: bool,
+    pub dirty_ram: bool,
 }
 
 impl Mbc1 {
@@ -36,17 +37,18 @@ impl Default for Mbc1 {
             num_banks: 1,
             has_ram: false,
             has_battery: false,
+            dirty_ram: false,
         }
     }
 }
 
 impl Mbc1 {
     pub fn set_rom(&mut self, rom: Vec<u8>) {
-        self.num_banks = (rom.len() / 0x4000).max(1) as usize;
+        self.num_banks = (rom.len() / 0x4000).max(1);
         self.rom = Box::leak(rom.into_boxed_slice());
     }
     pub fn set_rom_static(&mut self, rom: &'static [u8]) {
-        self.num_banks = (rom.len() / 0x4000).max(1) as usize;
+        self.num_banks = (rom.len() / 0x4000).max(1);
         self.rom = rom;
     }
     pub fn read(&self, addr: u16) -> u8 {
@@ -94,6 +96,7 @@ impl Mbc1 {
                         0
                     };
                     self.ram[addr as usize - 0xa000 + used_bank * 0x2000] = data;
+                    self.dirty_ram = true;
                 }
             }
             _ => {}

@@ -37,7 +37,7 @@ impl Default for MemoryBus {
 
 impl MemoryBus {
     #[cfg(feature = "std")]
-    pub fn from_file(path: &str) -> std::io::Result<Self> {
+    pub fn from_file(path: &std::path::Path) -> std::io::Result<Self> {
         Ok(Self {
             cart: Cartridge::from_file(path)?,
             ..Default::default()
