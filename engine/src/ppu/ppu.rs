@@ -176,7 +176,6 @@ impl Ppu {
                     }
                     if self.ly == 144 {
                         self.state = PpuState::VerticalBlank;
-                        self.frame_ready = true;
                         int |= Interrupt::VBlank as u8;
                         if self.stat & MODE1_INT_SEL_FLAG != 0 {
                             int |= Interrupt::LcdStat as u8;
@@ -195,6 +194,7 @@ impl Ppu {
                     self.ly += 1;
                     if self.ly > 153 {
                         self.ly = 0;
+                        self.frame_ready = true;
                         self.window_line_cnt = 0;
                         self.state = PpuState::OAMScan;
                         if self.stat & MODE1_INT_SEL_FLAG != 0 {
