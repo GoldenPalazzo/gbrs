@@ -15,7 +15,7 @@ pub enum Mapper {
 }
 
 impl Mapper {
-    fn dirty_sram(&self) -> bool {
+    pub fn dirty_sram(&self) -> bool {
         match self {
             Mapper::RomOnly(_) => false,
             Mapper::Mbc1(m) => m.has_battery && m.dirty_ram,
@@ -23,7 +23,7 @@ impl Mapper {
         }
     }
 
-    fn clear_dirty(&mut self) {
+    pub fn clear_dirty(&mut self) {
         match self {
             Mapper::RomOnly(_) => {}
             Mapper::Mbc1(m) => m.dirty_ram = false,

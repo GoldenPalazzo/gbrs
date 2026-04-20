@@ -98,7 +98,8 @@ impl Mbc3 {
             }
             0xa000..=0xbfff => match (self.ram_timer_enable, self.ram_rtc_select) {
                 (true, 0x00..=0x07) => {
-                    self.ram[addr as usize - 0xa000 + self.ram_rtc_select as usize * 0x2000] = data
+                    self.ram[addr as usize - 0xa000 + self.ram_rtc_select as usize * 0x2000] = data;
+                    self.dirty_ram = true;
                 }
                 // (true, 0x08..=0x0c) => ,
                 _ => {}

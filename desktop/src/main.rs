@@ -79,9 +79,12 @@ fn main_loop(
     mut win: Window,
     audio: AudioOutput,
     bps: &Option<Vec<u16>>,
+    savepath: &Path,
 ) {
     const PALETTE: [u32; 4] = [0xFFFFFF, 0xAAAAAA, 0x555555, 0x000000];
+    const SAVE_THRESHOLD: u32 = 1_000_000;
     let mut bp = false;
+    let mut save_cntr = 0u32;
     loop {
         if let Some(a) = bps
             && a.contains(&cpu.regs.get_pc())
@@ -99,6 +102,16 @@ fn main_loop(
         let cycles = cpu.step(&mut mem);
         mem.step(cycles);
         audio.buffer.lock().unwrap().extend(mem.apu.drain_samples());
+        if mem.cart.mapper.dirty_sram() {
+            save_cntr += cycles as u32;
+            if save_cntr >= SAVE_THRESHOLD {
+                save_cntr = 0;
+                // This unwrap is safe
+                let sram = mem.cart.mapper.ram_slice().unwrap();
+                std::fs::write(savepath, sram).unwrap();
+                mem.cart.mapper.clear_dirty();
+            }
+        }
         if mem.ppu.frame_ready {
             mem.ppu.frame_ready = false;
             let rgb: Vec<u32> = mem
@@ -148,7 +161,7 @@ fn main() -> std::io::Result<()> {
         160,
         144,
         WindowOptions {
-            scale: Scale::X8,
+            scale: Scale::X4,
             ..WindowOptions::default()
         },
     )
@@ -161,6 +174,13 @@ fn main() -> std::io::Result<()> {
     let audio = AudioOutput::new();
     mem.apu.set_sample_rate(audio.get_sample_rate());
 
-    main_loop(cpu, mem, window, audio, &None);
+    main_loop(
+        cpu,
+        mem,
+        window,
+        audio,
+        &None,
+        &path.with_extension("gbsav"),
+    );
     Ok(())
 }
