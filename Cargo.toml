@@ -1,5 +1,5 @@
 [workspace]
-members = ["engine", "desktop", "pico"]
+members = ["engine", "desktop", "pico", "libretro"]
 default-members = ["engine", "desktop"]
 resolver = "3"
 

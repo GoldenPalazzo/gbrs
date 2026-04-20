@@ -1,0 +1,13 @@
+[package]
+name = "gbrs-libretro"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+gbrs-engine = { path = "../engine", features = ["std"] }
+chrono = "0.4.44"
+cpal = "0.17.3"
+libretro-backend = "0.2"
+
+[lib]
+crate-type = ["cdylib"]
