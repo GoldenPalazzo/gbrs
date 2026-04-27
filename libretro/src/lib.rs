@@ -132,6 +132,12 @@ impl libretro_backend::Core for Emu {
         }
     }
 
+    fn save_memory(&mut self) -> Option<&mut [u8]> {
+        self.mem
+            .as_mut()
+            .and_then(|mem| mem.cart.mapper.ram_slice_mut())
+    }
+
     fn on_reset(&mut self) {}
 }
 

@@ -15,6 +15,21 @@ pub enum Mapper {
 }
 
 impl Mapper {
+    pub fn from_hw_type(hw_type: u8) -> Self {
+        match hw_type {
+            0x00 => Mapper::RomOnly(RomOnly::default()),
+            0x01 => Mapper::Mbc1(Mbc1::new(false, false)),
+            0x02 => Mapper::Mbc1(Mbc1::new(true, false)),
+            0x03 => Mapper::Mbc1(Mbc1::new(true, true)),
+            0x0f => Mapper::Mbc3(Mbc3::new(false, true, true)),
+            0x10 => Mapper::Mbc3(Mbc3::new(true, true, true)),
+            0x11 => Mapper::Mbc3(Mbc3::new(false, false, false)),
+            0x12 => Mapper::Mbc3(Mbc3::new(true, false, false)),
+            0x13 => Mapper::Mbc3(Mbc3::new(true, false, true)),
+            _ => todo!("Mapper {} not implemented", hw_type),
+        }
+    }
+
     pub fn dirty_sram(&self) -> bool {
         match self {
             Mapper::RomOnly(_) => false,
@@ -100,22 +115,17 @@ impl Cartridge {
         let data = std::fs::read(path)?;
         let hw_type = data[0x147];
         // let title = String::from_utf8_lossy(&data[0x134..0x144]).to_string();
-        let mut mapper: Mapper = match hw_type {
-            0x00 => Mapper::RomOnly(RomOnly::default()),
-            0x01 => Mapper::Mbc1(Mbc1::new(false, false)),
-            0x02 => Mapper::Mbc1(Mbc1::new(true, false)),
-            0x03 => Mapper::Mbc1(Mbc1::new(true, true)),
-            0x0f => Mapper::Mbc3(Mbc3::new(false, true, true)),
-            0x10 => Mapper::Mbc3(Mbc3::new(true, true, true)),
-            0x11 => Mapper::Mbc3(Mbc3::new(false, false, false)),
-            0x12 => Mapper::Mbc3(Mbc3::new(true, false, false)),
-            0x13 => Mapper::Mbc3(Mbc3::new(true, false, true)),
-            _ => todo!("Mapper {} not implemented", hw_type),
-        };
+        let mut mapper: Mapper = Mapper::from_hw_type(hw_type);
         mapper.set_rom(data);
+        // Ok(Self { title, mapper })
+        Ok(Self { mapper })
+    }
+
+    #[cfg(feature = "std")]
+    pub fn set_save_from_file(&mut self, path: &std::path::Path) {
         match std::fs::read(path.with_extension("gbsav")) {
             Ok(saved) => {
-                if let Some(sram) = mapper.ram_slice_mut() {
+                if let Some(sram) = self.mapper.ram_slice_mut() {
                     std::println!("Loaded save {:?}", path.with_extension("gbsav"));
                     let len = sram.len().min(saved.len());
                     sram[..len].copy_from_slice(&saved[..len]);
@@ -125,25 +135,12 @@ impl Cartridge {
                 std::println!("No save {:?}", path.with_extension("gbsav"));
             }
         }
-        // Ok(Self { title, mapper })
-        Ok(Self { mapper })
     }
 
     pub fn from_static(data: &'static [u8]) -> Self {
         let hw_type = data[0x147];
         // let title = String::from_utf8_lossy(&data[0x134..0x144]).to_string();
-        let mut mapper: Mapper = match hw_type {
-            0x00 => Mapper::RomOnly(RomOnly::default()),
-            0x01 => Mapper::Mbc1(Mbc1::new(false, false)),
-            0x02 => Mapper::Mbc1(Mbc1::new(true, false)),
-            0x03 => Mapper::Mbc1(Mbc1::new(true, true)),
-            0x0f => Mapper::Mbc3(Mbc3::new(false, true, true)),
-            0x10 => Mapper::Mbc3(Mbc3::new(true, true, true)),
-            0x11 => Mapper::Mbc3(Mbc3::new(false, false, false)),
-            0x12 => Mapper::Mbc3(Mbc3::new(true, false, false)),
-            0x13 => Mapper::Mbc3(Mbc3::new(true, false, true)),
-            _ => todo!("Mapper {} not implemented", hw_type),
-        };
+        let mut mapper: Mapper = Mapper::from_hw_type(hw_type);
         mapper.set_rom_static(data);
         // Ok(Self { title, mapper })
         Self { mapper }

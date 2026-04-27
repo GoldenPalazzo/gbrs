@@ -170,9 +170,10 @@ fn main() -> std::io::Result<()> {
 
     let path = Path::new(&args[1]);
     let cpu = Cpu::new();
-    let mut mem = MemoryBus::from_file(path).unwrap();
+    let mut mem = MemoryBus::from_file(path)?;
     let audio = AudioOutput::new();
     mem.apu.set_sample_rate(audio.get_sample_rate());
+    mem.cart.set_save_from_file(path);
 
     main_loop(
         cpu,

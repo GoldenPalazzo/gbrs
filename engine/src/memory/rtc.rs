@@ -4,6 +4,7 @@ pub trait RtcSource {
     fn hour(&self) -> u8;
     fn ordinal0(&self) -> u16;
     fn snapshot(&mut self);
+    fn step(&mut self, mcycles: u8);
 }
 
 pub struct MockRtc {}
@@ -22,4 +23,5 @@ impl RtcSource for MockRtc {
         0
     }
     fn snapshot(&mut self) {}
+    fn step(&mut self, mcycles: u8) {}
 }
