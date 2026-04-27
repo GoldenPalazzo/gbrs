@@ -14,10 +14,7 @@ const FPS: f64 = SAMPLERATE_HZ as f64 / SAMPLES_PER_FRAME as f64;
 #[inline]
 fn as_bytes<T: Copy>(array: &[T]) -> &[u8] {
     unsafe {
-        core::slice::from_raw_parts(
-            core::mem::transmute(array.as_ptr()),
-            core::mem::size_of::<T>() * array.len(),
-        )
+        core::slice::from_raw_parts(array.as_ptr() as *const u8, core::mem::size_of_val(array))
     }
 }
 
