@@ -23,8 +23,7 @@ fn as_bytes<T: Copy>(array: &[T]) -> &[u8] {
 #[inline]
 fn unit_to_i16(sample: f32) -> i16 {
     assert!((0f32..=1f32).contains(&sample));
-    let bi = sample * 2. - 1.;
-    (bi * i16::MAX as f32) as i16
+    (sample * i16::MAX as f32) as i16
 }
 
 struct Emu {
