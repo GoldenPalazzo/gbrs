@@ -6,9 +6,10 @@ use libretro_backend::{
 use gbrs_engine::{cpu::cpu::Cpu, memory::bus::MemoryBus};
 
 const PALETTE: [u32; 4] = [0xFF_FFFFFF, 0xFF_AAAAAA, 0xFF_555555, 0xFF_000000];
-const FPS: f64 = 59.7;
-const SAMPLERATE: f32 = 1048576. / 23.;
-const NEEDED_PAIRS: f32 = SAMPLERATE / FPS as f32;
+const SAMPLERATE_MCYCLES: f32 = 22.;
+const SAMPLES_PER_FRAME: usize = 797;
+const SAMPLERATE_HZ: f32 = 1048576. / SAMPLERATE_MCYCLES;
+const FPS: f64 = SAMPLERATE_HZ as f64 / SAMPLES_PER_FRAME as f64;
 
 #[inline]
 fn as_bytes<T: Copy>(array: &[T]) -> &[u8] {
@@ -66,7 +67,7 @@ impl libretro_backend::Core for Emu {
             match res {
                 Err(_) => return LoadGameResult::Failed(game_data),
                 Ok(mut mem) => {
-                    mem.apu.set_sample_rate(SAMPLERATE);
+                    mem.apu.set_sample_rate(SAMPLERATE_HZ);
                     self.mem = Some(mem);
                 }
             };
@@ -75,9 +76,10 @@ impl libretro_backend::Core for Emu {
         }
         let av_info = AudioVideoInfo::new()
             .video(160, 144, FPS, PixelFormat::ARGB8888)
-            .audio(SAMPLERATE as f64)
+            .audio(SAMPLERATE_HZ as f64)
             .region(Region::NTSC);
         self.game_data = Some(game_data);
+        println!("FPS: {FPS}");
         LoadGameResult::Success(av_info)
     }
 
@@ -96,11 +98,6 @@ impl libretro_backend::Core for Emu {
                         .iter()
                         .map(|sample: &f32| unit_to_i16(*sample)),
                 );
-                // if self.audio_samples.len() as f32 >= NEEDED_SAMPLES {
-                //     let s = core::mem::take(&mut self.audio_samples);
-                //     println!("Sending {} samples...", s.len());
-                //     handle.upload_audio_frame(&s);
-                // }
                 if mem.ppu.frame_ready {
                     mem.ppu.frame_ready = false;
                     let argb: Vec<u32> = mem
@@ -109,28 +106,12 @@ impl libretro_backend::Core for Emu {
                         .iter()
                         .map(|&p| PALETTE[p as usize])
                         .collect();
-                    // let samples: Vec<i16> = mem
-                    //     .apu
-                    //     .drain_samples()
-                    //     .iter()
-                    //     .map(|&s| unit_to_i16(s))
-                    //     .collect();
-                    // println!("Sending {} samples", samples.len());
                     let fb = as_bytes(&argb);
                     handle.upload_video_frame(fb);
-                    self.samples_overflow += NEEDED_PAIRS.fract();
-                    if self.samples_overflow >= 1. {
-                        self.samples_overflow -= 1.;
-                    }
-                    let pairs = (NEEDED_PAIRS + self.samples_overflow) as usize;
-                    let n = (pairs * 2).min(self.audio_samples.len());
-                    println!(
-                        "buffer: {}, n: {}, overflow: {}",
-                        self.audio_samples.len(),
-                        n,
-                        self.samples_overflow
-                    );
-                    let samples: Vec<i16> = self.audio_samples.drain(..n).collect();
+                    self.samples_overflow += SAMPLES_PER_FRAME as f32;
+                    let pairs = self.samples_overflow as usize;
+                    self.samples_overflow -= pairs as f32;
+                    let samples: Vec<i16> = self.audio_samples.drain(..pairs * 2).collect();
                     handle.upload_audio_frame(&samples);
 
                     break;
