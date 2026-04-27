@@ -86,6 +86,19 @@ impl libretro_backend::Core for Emu {
 
     fn on_run(&mut self, handle: &mut RuntimeHandle) {
         if let Some(mem) = &mut self.mem {
+            mem.joypad.set_dpad(
+                handle.is_joypad_button_pressed(0, JoypadButton::Right),
+                handle.is_joypad_button_pressed(0, JoypadButton::Left),
+                handle.is_joypad_button_pressed(0, JoypadButton::Up),
+                handle.is_joypad_button_pressed(0, JoypadButton::Down),
+            );
+            mem.joypad.set_buttons(
+                handle.is_joypad_button_pressed(0, JoypadButton::A),
+                handle.is_joypad_button_pressed(0, JoypadButton::B),
+                handle.is_joypad_button_pressed(0, JoypadButton::Select),
+                handle.is_joypad_button_pressed(0, JoypadButton::Start),
+            );
+
             loop {
                 let cycles = self.cpu.step(mem);
                 mem.step(cycles);
