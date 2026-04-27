@@ -133,8 +133,8 @@ impl Apu {
         core::mem::take(&mut self.samples)
     }
 
-    pub fn set_sample_rate(&mut self, sample_rate_khz: f32) {
-        self.sample_rate_mcycles = (1048576.0 / sample_rate_khz) as u8;
+    pub fn set_sample_rate(&mut self, sample_rate_hz: f32) {
+        self.sample_rate_mcycles = (1048576.0 / sample_rate_hz) as u8;
     }
 
     pub fn divapu_tick(&mut self) {
