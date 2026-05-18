@@ -83,10 +83,10 @@ fn main_loop(
     mut delay: cortex_m::delay::Delay,
     timer: Timer,
 ) -> ! {
+    blink(&mut delay, &mut debug_led, 3000);
     let mut cycles_count: u32 = 0;
 
     let mut last_time = timer.get_counter().ticks();
-    blink(&mut delay, &mut debug_led, 100);
 
     loop {
         let cycles = cpu.step(&mut mem);
